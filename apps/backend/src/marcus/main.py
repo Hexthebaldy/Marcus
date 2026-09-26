@@ -8,8 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError, OperationalError
 
-from . import catalog, discovery, editorials, engagement, identity, media, moderation, notes
-from .config import settings
+from marcus.catalog import api as catalog
+from marcus.community import discovery, engagement
+from marcus.core.config import settings
+from marcus.editorials import api as editorials
+from marcus.identity import api as identity
+from marcus.media import api as media
+from marcus.moderation import api as moderation
+from marcus.notes import api as notes
 
 ENCODERS_BY_TYPE[datetime] = lambda value: (
     value.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")

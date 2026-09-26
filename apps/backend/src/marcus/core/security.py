@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from cryptography.fernet import Fernet
 
-from .config import settings
+from marcus.core.config import settings
 
 
 def now():

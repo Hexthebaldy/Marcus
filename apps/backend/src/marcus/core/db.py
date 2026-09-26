@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from .config import settings
+from marcus.core.config import settings
 
 engine = create_async_engine(settings.database_url, pool_pre_ping=True, isolation_level="REPEATABLE READ")
 SessionFactory = async_sessionmaker(engine, expire_on_commit=False)

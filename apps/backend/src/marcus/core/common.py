@@ -10,10 +10,10 @@ from jwt import InvalidTokenError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from . import models as m
-from .config import settings
-from .db import get_session
-from .security import decode_token, digest, now
+from marcus.core.config import settings
+from marcus.core.db import get_session
+from marcus.core.security import decode_token, digest, now
+from marcus.database import models as m
 
 
 def fail(status, code, message=None):

@@ -25,7 +25,7 @@ from .test_worker_media import upload_file
 
 
 async def test_auth_rejects_invalid_token_without_disguising_programming_errors(api, monkeypatch):
-    from marcus import common
+    from marcus.core import common
 
     response = await api.client.get("/v1/me", headers={"Authorization": "Bearer invalid"})
     assert response.status_code == 401
@@ -43,7 +43,7 @@ async def test_auth_rejects_invalid_token_without_disguising_programming_errors(
 async def test_rate_limit_distinguishes_exhaustion_outage_and_programming_error(api, monkeypatch):
     from redis.exceptions import ConnectionError as RedisConnectionError
 
-    from marcus import identity
+    from marcus.identity import api as identity
 
     monkeypatch.setattr(identity.settings, "rate_limit_enabled", True)
     redis = AsyncMock()
@@ -214,7 +214,7 @@ async def test_moderation_detail_and_report_keep_media_order_and_revision_shape(
 
 
 async def test_rotated_jpeg_keeps_size_orientation_and_removes_exif(api, db, s3_service):
-    from marcus.worker import claim_job, execute_job
+    from marcus.jobs.worker import claim_job, execute_job
 
     actor = await api.login()
     await db.execute("UPDATE jobs SET status='cancelled' WHERE kind='send_verification_email'")
@@ -244,8 +244,8 @@ async def test_upload_completion_does_not_label_storage_failures_as_missing_uplo
 
     from botocore.exceptions import ClientError
 
-    from marcus import media
     from marcus.main import app
+    from marcus.media import api as media
 
     owner = await api.login()
     created = await api.request(

@@ -12,7 +12,7 @@ from .helpers import (
 
 
 async def test_web_session_cookie_origin_guard_and_refresh(api):
-    from marcus.config import settings
+    from marcus.core.config import settings
 
     _, challenge_id, code = await api.challenge()
     body = {"challenge_id": challenge_id, "code": code, "device_label": "web", "client_type": "editor_web"}

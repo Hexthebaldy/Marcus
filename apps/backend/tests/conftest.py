@@ -29,7 +29,7 @@ def test_environment():
 
 @pytest.fixture
 async def db(test_environment):
-    from marcus.db import engine
+    from marcus.core.db import engine
 
     assert make_url(str(engine.url)).database.endswith("_test")
     async with engine.begin() as conn:
@@ -92,7 +92,7 @@ class Api:
         return response.json() if response.content else None
 
     async def challenge(self, email=None, purpose="login", actor=None):
-        from marcus.security import decrypt
+        from marcus.core.security import decrypt
 
         email = email or f"reader-{uuid4().hex}@example.com"
         body = {"email": email, "purpose": purpose}
@@ -168,9 +168,9 @@ def asset_factory(db):
     async def create(owner, *, kind="image", purpose="note_image", status="ready"):
         from datetime import timedelta
 
-        from marcus.db import SessionFactory
-        from marcus.models import MediaAsset
-        from marcus.security import now
+        from marcus.core.db import SessionFactory
+        from marcus.core.security import now
+        from marcus.database.models import MediaAsset
 
         asset_id = str(uuid4())
         if kind == "image":

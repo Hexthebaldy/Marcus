@@ -8,13 +8,13 @@ from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy import select
 
-from . import models as m
-from . import responses as out
-from . import schemas as s
-from .common import current_user, enqueue, fail, get, idempotency, remember, roles
-from .config import settings
-from .db import get_session
-from .security import now
+from marcus.contracts import responses as out
+from marcus.contracts import schemas as s
+from marcus.core.common import current_user, enqueue, fail, get, idempotency, remember, roles
+from marcus.core.config import settings
+from marcus.core.db import get_session
+from marcus.core.security import now
+from marcus.database import models as m
 
 router = APIRouter(tags=["media"])
 

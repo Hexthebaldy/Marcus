@@ -2,7 +2,7 @@ from .helpers import decide_note, new_note, new_place, submit_note
 
 
 async def test_retention_removes_expired_secrets_and_keeps_referenced_media(api, db, location, asset_factory):
-    from marcus.worker import sweep_retention
+    from marcus.jobs.worker import sweep_retention
 
     author = await api.login()
     orphan = await asset_factory(author)
@@ -32,7 +32,7 @@ async def test_retention_removes_expired_secrets_and_keeps_referenced_media(api,
 
 
 async def test_deleted_note_retains_then_cleans_payload_and_releases_media(api, db, location, asset_factory):
-    from marcus.worker import claim_job, execute_job, sweep_retention
+    from marcus.jobs.worker import claim_job, execute_job, sweep_retention
 
     author, reviewer = await api.login(), await api.login("moderator")
     image = await asset_factory(author)
@@ -130,7 +130,7 @@ async def test_public_contract_exposes_two_distinct_content_schemas(api):
 
 
 async def test_smtp_unknown_prior_send_is_not_repeated(api, db):
-    from marcus.worker import claim_job, execute_job
+    from marcus.jobs.worker import claim_job, execute_job
 
     _, challenge_id, _ = await api.challenge()
     await db.execute(

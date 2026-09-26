@@ -6,9 +6,9 @@ from uuid import NAMESPACE_URL, uuid5
 
 from sqlalchemy import select
 
-from . import models as m
-from .db import SessionFactory, engine
-from .security import digest, encrypt, normalize_email, now
+from marcus.core.db import SessionFactory, engine
+from marcus.core.security import digest, encrypt, normalize_email, now
+from marcus.database import models as m
 
 SHANGHAI_ID = str(uuid5(NAMESPACE_URL, "marcus:city:shanghai"))
 DISTRICTS = [

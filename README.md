@@ -12,7 +12,7 @@
 |---|---|
 | `apps/mobile` | TypeScript、React Native、Expo 手机应用。 |
 | `apps/editor` | React、Vite 网页编辑与审核后台。 |
-| `apps/backend` | FastAPI 接口、MySQL 数据模型与迁移、独立后台工作进程、后端测试。 |
+| `apps/backend` | FastAPI 接口、MySQL 数据模型与迁移、独立后台工作进程、后端测试。见[后端代码导航](apps/backend/README.md)。 |
 | `packages/api-client` | 两端共用的请求、登录续期和接口类型。 |
 | `packages/design-tokens` | 手机端使用的卡其色与深绿色等配色值。网页采用同一套主要配色。 |
 | `packages/editorial-schema` | 专业文章的内容块和校验。 |
@@ -48,7 +48,7 @@ pnpm storage:init
 
 ```bash
 cd apps/backend
-uv run python -m marcus.seed --admin-email editor@example.com
+uv run python -m marcus.catalog.seed --admin-email editor@example.com
 cd ../..
 ```
 

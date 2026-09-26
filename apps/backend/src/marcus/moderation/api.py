@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select, update
 
-from . import models as m
-from . import schemas as s
-from .catalog import basic_list
-from .common import admin, audit, data, fail, get, moderator, page, version
-from .db import get_session
-from .editorials import apply_revision
-from .media import media_response
-from .notes import apply_submission
-from .security import now
+from marcus.catalog.api import basic_list
+from marcus.contracts import schemas as s
+from marcus.core.common import admin, audit, data, fail, get, moderator, page, version
+from marcus.core.db import get_session
+from marcus.core.security import now
+from marcus.database import models as m
+from marcus.editorials.api import apply_revision
+from marcus.media.api import media_response
+from marcus.notes.api import apply_submission
 
 router = APIRouter(tags=["moderation"])
 

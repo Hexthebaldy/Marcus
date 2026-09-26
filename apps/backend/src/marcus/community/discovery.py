@@ -3,12 +3,12 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, tuple_
 
-from . import models as m
-from . import responses as out
-from .common import city_exists, current_user, decode_cursor, encode_cursor, fail, get, page
-from .db import get_session
-from .editorials import article_response
-from .notes import note_response
+from marcus.contracts import responses as out
+from marcus.core.common import city_exists, current_user, decode_cursor, encode_cursor, fail, get, page
+from marcus.core.db import get_session
+from marcus.database import models as m
+from marcus.editorials.api import article_response
+from marcus.notes.api import note_response
 
 router = APIRouter(tags=["discovery"])
 

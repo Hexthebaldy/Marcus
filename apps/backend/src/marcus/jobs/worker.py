@@ -1,4 +1,4 @@
-"""MySQL leased work queue. Run with python -m marcus.worker."""
+"""MySQL leased work queue. Run with python -m marcus.jobs.worker."""
 
 import asyncio
 import io
@@ -17,12 +17,12 @@ import aiosmtplib
 from PIL import Image, ImageOps
 from sqlalchemy import delete, select, update
 
-from . import models as m
-from .common import data, enqueue
-from .config import settings
-from .db import SessionFactory
-from .media import referenced, storage
-from .security import decrypt, now
+from marcus.core.common import data, enqueue
+from marcus.core.config import settings
+from marcus.core.db import SessionFactory
+from marcus.core.security import decrypt, now
+from marcus.database import models as m
+from marcus.media.api import referenced, storage
 
 log = logging.getLogger("marcus.worker")
 
@@ -394,10 +394,10 @@ async def send_email(job):
 async def review(job):
     from fastapi import HTTPException
 
-    from .editorials import article_validate
-    from .moderation import decide_note
-    from .notes import validate_submission
-    from .schemas import DecisionInput
+    from marcus.contracts.schemas import DecisionInput
+    from marcus.editorials.api import article_validate
+    from marcus.moderation.api import decide_note
+    from marcus.notes.api import validate_submission
 
     async with SessionFactory.begin() as db:
         if not await lease_guard(db, job):

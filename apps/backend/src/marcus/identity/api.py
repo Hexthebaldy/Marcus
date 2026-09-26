@@ -9,19 +9,19 @@ from redis.exceptions import RedisError
 from sqlalchemy import select, update
 from sqlalchemy.dialects.mysql import insert
 
-from . import models as m
-from . import responses as out
-from . import schemas as s
-from .common import check_origin, city_exists, current_user, data, enqueue, fail, get, roles
-from .config import settings
-from .db import get_session
-from .security import access_token, digest, encrypt, new_refresh, normalize_email, now
+from marcus.contracts import responses as out
+from marcus.contracts import schemas as s
+from marcus.core.common import check_origin, city_exists, current_user, data, enqueue, fail, get, roles
+from marcus.core.config import settings
+from marcus.core.db import get_session
+from marcus.core.security import access_token, digest, encrypt, new_refresh, normalize_email, now
+from marcus.database import models as m
 
 router = APIRouter(tags=["identity"])
 
 
 async def profile(db, user):
-    from .media import media_response
+    from marcus.media.api import media_response
 
     return {
         "id": user.id,
@@ -252,7 +252,7 @@ async def edit_me(
     if values.get("city_id"):
         await city_exists(db, values["city_id"])
     if values.get("avatar_asset_id"):
-        from .media import validate_assets
+        from marcus.media.api import validate_assets
 
         await validate_assets(db, user, [values["avatar_asset_id"]], "avatar", ready=True)
     for k, v in values.items():

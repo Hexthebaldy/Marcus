@@ -4,9 +4,9 @@ from uuid import uuid4
 
 
 async def enqueue_test_job(*, available_delta=0, max_attempts=3):
-    from marcus.db import SessionFactory
-    from marcus.models import Job
-    from marcus.security import now
+    from marcus.core.db import SessionFactory
+    from marcus.core.security import now
+    from marcus.database.models import Job
 
     job_id = str(uuid4())
     async with SessionFactory.begin() as session:
@@ -25,7 +25,7 @@ async def enqueue_test_job(*, available_delta=0, max_attempts=3):
 
 
 async def test_mysql_skip_locked_two_workers_claim_different_jobs(db):
-    from marcus.worker import claim_job
+    from marcus.jobs.worker import claim_job
 
     expected = {await enqueue_test_job(), await enqueue_test_job()}
     first, second = await asyncio.gather(claim_job("worker-a"), claim_job("worker-b"))
@@ -37,7 +37,7 @@ async def test_mysql_skip_locked_two_workers_claim_different_jobs(db):
 
 
 async def test_expired_lease_is_reclaimed_and_old_worker_cannot_write(db):
-    from marcus.worker import claim_job, finish_job, renew_job
+    from marcus.jobs.worker import claim_job, finish_job, renew_job
 
     job_id = await enqueue_test_job()
     first = await claim_job("worker-a")
@@ -57,7 +57,7 @@ async def test_expired_lease_is_reclaimed_and_old_worker_cannot_write(db):
 
 
 async def test_failed_job_backoff_and_attempt_limit(db):
-    from marcus.worker import claim_job, finish_job
+    from marcus.jobs.worker import claim_job, finish_job
 
     job_id = await enqueue_test_job(max_attempts=2)
     first = await claim_job("worker-a")
@@ -75,7 +75,7 @@ async def test_failed_job_backoff_and_attempt_limit(db):
 
 
 async def test_future_job_is_not_claimed_and_expired_max_attempt_is_terminal(db):
-    from marcus.worker import claim_job
+    from marcus.jobs.worker import claim_job
 
     future = await enqueue_test_job(available_delta=3600)
     exhausted = await enqueue_test_job(max_attempts=1)

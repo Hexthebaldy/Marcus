@@ -12,7 +12,7 @@ async def test_challenge_does_not_register_and_can_be_consumed_once(api, db):
     assert await db.scalar("SELECT COUNT(*) FROM users") == 1
     assert await db.scalar("SELECT COUNT(*) FROM auth_sessions") == 1
     assert await db.scalar("SELECT consumed_at FROM auth_challenges WHERE id=:id", {"id": challenge_id})
-    from marcus.security import decrypt
+    from marcus.core.security import decrypt
 
     stored = await db.scalar("SELECT email_ciphertext FROM users")
     assert decrypt(stored) == "Reader.Name+festival@example.com"

@@ -128,7 +128,7 @@ flowchart LR
 | 请求频率限制 | Redis | 限制验证码发送及其他高频请求。 |
 | 依赖管理 | 前端pnpm，后端uv | 分别锁定依赖；根目录统一开发命令。 |
 
-下面展示原设计的模块划分。当前实现已落地；后端暂用 `src/marcus/identity.py`、`catalog.py`、`notes.py` 等同名文件组织职责，没有提前拆成下面示意的多级模块目录。实际目录和启动命令见根目录 README。
+下面是当前仓库结构。后端按业务建立子包，数据库表模型和请求、响应定义有独立目录。具体文件职责见[后端代码导航](../../apps/backend/README.md)。
 
 ```text
 Marcus/
@@ -137,27 +137,27 @@ Marcus/
     editor/                  # Editor专业创作与审核网页后台
     backend/
       src/marcus/
-        main.py              # 接收网络请求
-        worker.py            # 执行媒体、邮件与审核任务
-        modules/
-          identity/          # 邮箱登录、用户和角色
-          catalog/           # 地点、活动、场次和标签
-          notes/             # 简单帖子、草稿和提交
-          editorials/        # 专业文章、工作稿与固定版本
-          media/             # 图片处理、视频转码和访问权限
-          discovery/         # 分别读取两个列表
-          engagement/        # 分开处理帖子和文章互动
-          moderation/        # 分开处理两种审核与举报
-        infrastructure/      # MySQL、Redis、存储和邮件连接
+        main.py              # HTTP服务入口
+        identity/            # 邮箱登录和用户资料
+        catalog/             # 城市、区、地点、活动、场次、标签及初始化数据
+        notes/               # 用户笔记、草稿与提交
+        editorials/          # 专业文章与正文格式检查
+        media/               # 媒体上传及访问权限
+        moderation/          # 内容审核与管理
+        community/           # Discover、互动与举报
+        jobs/                # 执行邮件、媒体和清理等后台任务
+        core/                # 配置、数据库连接和共用函数
+        database/            # 数据库表模型、约束与索引
+        contracts/           # 请求与响应字段定义
       migrations/
       tests/
   packages/
-    api-client/              # 生成的前端请求代码，包含两套内容类型
-    editorial-schema/       # 专业正文格式与校验，不用于Notes
-    editorial-editor/       # 网页专业编辑器组件，只供后台使用
-    design-tokens/          # 共用字号、颜色、间距
-  contracts/                # 后端导出的接口和正文格式
-  infra/                    # 本地与生产服务配置
+    api-client/              # 前端共用请求封装与生成的接口类型
+    editorial-schema/        # 专业正文格式与校验，不用于Notes
+    editorial-editor/        # 网页专业编辑器组件，只供后台使用
+    design-tokens/           # 配色、间距和圆角
+  contracts/                 # 后端导出的接口说明
+  infra/                     # 本地基础服务配置
   docs/architecture/
 ```
 

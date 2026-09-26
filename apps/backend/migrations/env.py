@@ -3,8 +3,8 @@ import asyncio
 from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from marcus.config import settings
-from marcus.models import Base
+from marcus.core.config import settings
+from marcus.database.models import Base
 
 
 def run(connection):

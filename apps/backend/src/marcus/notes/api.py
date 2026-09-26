@@ -1,15 +1,26 @@
 from fastapi import APIRouter, Depends, Header, Query
 from sqlalchemy import delete, func, select
 
-from . import models as m
-from . import responses as out
-from . import schemas as s
-from .catalog import basic_list
-from .common import city_exists, current_user, data, enqueue, fail, get, idempotency, page, remember, version
-from .content_common import author_summary, links_response, note_links, reactions, visible
-from .db import get_session
-from .media import media_response, validate_assets
-from .security import now
+from marcus.catalog.api import basic_list
+from marcus.community.content_common import author_summary, links_response, note_links, reactions, visible
+from marcus.contracts import responses as out
+from marcus.contracts import schemas as s
+from marcus.core.common import (
+    city_exists,
+    current_user,
+    data,
+    enqueue,
+    fail,
+    get,
+    idempotency,
+    page,
+    remember,
+    version,
+)
+from marcus.core.db import get_session
+from marcus.core.security import now
+from marcus.database import models as m
+from marcus.media.api import media_response, validate_assets
 
 router = APIRouter(tags=["notes"])
 

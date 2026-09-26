@@ -15,7 +15,7 @@ from PIL import Image
 @pytest.fixture
 async def smtp_receiver(monkeypatch, db):
     """Minimal local SMTP receiver; the real worker uses a real TCP SMTP connection."""
-    from marcus.config import settings
+    from marcus.core.config import settings
 
     received = []
 
@@ -61,7 +61,7 @@ async def smtp_receiver(monkeypatch, db):
 
 
 async def test_worker_sends_real_smtp_message_then_erases_delivery_secret(api, db, smtp_receiver):
-    from marcus.worker import claim_job, execute_job
+    from marcus.jobs.worker import claim_job, execute_job
 
     email, challenge_id, code = await api.challenge()
     job = await claim_job("email-worker")
@@ -87,7 +87,7 @@ async def test_worker_sends_real_smtp_message_then_erases_delivery_secret(api, d
 
 
 async def test_worker_does_not_send_superseded_verification_code(api, db, smtp_receiver):
-    from marcus.worker import claim_job, execute_job
+    from marcus.jobs.worker import claim_job, execute_job
 
     email, old_id, old_code = await api.challenge()
     await db.execute("UPDATE auth_send_limits SET next_allowed_at=UTC_TIMESTAMP(6)-INTERVAL 1 SECOND")
@@ -108,8 +108,8 @@ async def test_worker_does_not_send_superseded_verification_code(api, db, smtp_r
 async def s3_service(db):
     if os.environ.get("MARCUS_TEST_S3_ENABLED") != "1":
         pytest.skip("Enable MARCUS_TEST_S3_ENABLED=1 with a local S3-compatible HTTP service")
-    from marcus.config import settings
-    from marcus.media import storage
+    from marcus.core.config import settings
+    from marcus.media.api import storage
 
     assert settings.s3_bucket.endswith("-test"), "External media tests require a dedicated *-test bucket"
     client = storage()
@@ -146,7 +146,7 @@ async def upload_file(api, actor, content, kind="image", mime="image/png"):
 
 
 async def test_real_image_upload_process_and_signed_download(api, db, s3_service):
-    from marcus.worker import claim_job, execute_job
+    from marcus.jobs.worker import claim_job, execute_job
 
     actor = await api.login()
     await db.execute("UPDATE jobs SET status='cancelled' WHERE kind='send_verification_email'")
@@ -171,7 +171,7 @@ async def test_real_image_upload_process_and_signed_download(api, db, s3_service
 
 
 async def test_upload_claimed_image_with_invalid_bytes_is_rejected(api, db, s3_service):
-    from marcus.worker import claim_job, execute_job
+    from marcus.jobs.worker import claim_job, execute_job
 
     actor = await api.login()
     await db.execute("UPDATE jobs SET status='cancelled' WHERE kind='send_verification_email'")
@@ -187,7 +187,7 @@ async def test_upload_claimed_image_with_invalid_bytes_is_rejected(api, db, s3_s
 async def test_real_video_upload_transcode_and_poster(api, db, s3_service, tmp_path):
     import json
 
-    from marcus.worker import claim_job, execute_job
+    from marcus.jobs.worker import claim_job, execute_job
 
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
         pytest.skip("Real video processing requires ffmpeg and ffprobe on PATH")

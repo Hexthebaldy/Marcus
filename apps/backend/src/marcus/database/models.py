@@ -18,7 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.mysql import BIGINT, CHAR, DATETIME, DECIMAL, INTEGER, MEDIUMTEXT, SMALLINT
 from sqlalchemy.orm import DeclarativeBase
 
-from .security import now
+from marcus.core.security import now
 
 
 class Base(DeclarativeBase):

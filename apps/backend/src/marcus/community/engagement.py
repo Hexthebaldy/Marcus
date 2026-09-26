@@ -3,16 +3,26 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import delete, select
 
-from . import models as m
-from . import schemas as s
-from .catalog import basic_list
-from .common import audit, current_user, data, decode_cursor, encode_cursor, fail, get, moderator, page
-from .content_common import reactions, visible
-from .db import get_session
-from .editorials import article_response
-from .moderation import editorial_review_response, note_review_response
-from .notes import note_response
-from .security import now
+from marcus.catalog.api import basic_list
+from marcus.community.content_common import reactions, visible
+from marcus.contracts import schemas as s
+from marcus.core.common import (
+    audit,
+    current_user,
+    data,
+    decode_cursor,
+    encode_cursor,
+    fail,
+    get,
+    moderator,
+    page,
+)
+from marcus.core.db import get_session
+from marcus.core.security import now
+from marcus.database import models as m
+from marcus.editorials.api import article_response
+from marcus.moderation.api import editorial_review_response, note_review_response
+from marcus.notes.api import note_response
 
 router = APIRouter(tags=["engagement"])
 
