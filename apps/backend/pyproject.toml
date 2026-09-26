@@ -1,0 +1,21 @@
+[project]
+name = "marcus-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["fastapi>=0.121,<1", "uvicorn[standard]>=0.34,<1", "sqlalchemy[asyncio]>=2.0.38,<3", "asyncmy>=0.2.10,<1", "alembic>=1.14,<2", "pydantic-settings>=2.7,<3", "email-validator>=2.2,<3", "PyJWT>=2.10,<3", "cryptography>=44,<47", "redis>=5,<7", "boto3>=1.36,<2", "Pillow>=11,<13", "aiosmtplib>=3,<5"]
+[dependency-groups]
+dev = ["pytest>=8,<10", "pytest-asyncio>=0.25,<2", "httpx>=0.28,<1", "ruff>=0.9,<1"]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+[tool.hatch.build.targets.wheel]
+packages = ["src/marcus"]
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

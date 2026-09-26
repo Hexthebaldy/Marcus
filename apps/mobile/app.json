@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Marcus",
+    "slug": "marcus",
+    "scheme": "marcus",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.marcus.city" },
+    "android": { "package": "com.marcus.city" },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "允许 Marcus 访问你选择的照片，用于发布笔记和设置头像。",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "experiments": { "typedRoutes": true }
+  }
+}

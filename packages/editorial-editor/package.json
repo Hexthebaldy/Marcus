@@ -1,0 +1,29 @@
+{
+  "name": "@marcus/editorial-editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@marcus/editorial-schema": "workspace:*",
+    "@tiptap/core": "^3.0.0",
+    "@tiptap/react": "^3.0.0",
+    "@tiptap/pm": "^3.0.0",
+    "@tiptap/starter-kit": "^3.0.0",
+    "@tiptap/extension-blockquote": "^3.0.0",
+    "@tiptap/extension-list-item": "^3.0.0"
+  },
+  "peerDependencies": {
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "~19.2.0",
+    "typescript": "~5.9.3"
+  }
+}

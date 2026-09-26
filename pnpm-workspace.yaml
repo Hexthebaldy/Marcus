@@ -1,0 +1,24 @@
+packages:
+  - apps/mobile
+  - apps/editor
+  - packages/*
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - "@expo/cli@57.0.27"
+  - "@expo/router-server@57.0.11"
+  - "@expo/ui@57.0.20"
+  - babel-preset-expo@57.0.13
+  - expo-glass-effect@57.0.4
+  - expo-image-manipulator@57.0.20
+  - expo-image-picker@57.0.20
+  - expo-linking@57.0.11
+  - expo-modules-core@57.0.19
+  - expo-modules-jsi@57.1.1
+  - expo-router@57.0.23
+  - expo-video@57.0.5
+  - expo@57.0.25
+
+# Keep React DOM types aligned with React 19.2 in both clients.
+overrides:
+  "@types/react-dom": "~19.2.0"

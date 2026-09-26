@@ -1,6 +1,6 @@
 # 数据库表与字段说明
 
-> 本文是MySQL 8.4的设计方案，尚未创建数据库。所有业务数据放在名为 `marcus` 的数据库中。第一版包含邮箱登录、可选地点或活动重心的Editor专业文章、简单Notes和必要后台管理，不包含Agent。
+> 本文记录MySQL 8.4的数据设计。对应实现位于 `apps/backend/src/marcus/models.py`，初始迁移位于 `apps/backend/migrations/versions`；已经在独立 MySQL 环境运行迁移与测试。所有业务数据放在名为 `marcus` 的数据库中。第一版包含邮箱登录、可选地点或活动重心的Editor专业文章、简单Notes和必要后台管理，不包含Agent。
 
 ## 1. 先理解两种不同的内容
 
