@@ -45,7 +45,7 @@ export function Moderation({ mode }: { mode: "reviews" | "reports" }) {
   const client = useQueryClient();
   const path = `/admin/${kind}-${mode === "reports" ? "reports" : kind === "editorial" ? "reviews" : "submissions"}`;
   const query = useQuery({
-    queryKey: [path, cursor],
+    queryKey: [path, "list", cursor],
     queryFn: () =>
       api.get<Page<ReviewItem>>(path, {
         cursor,
@@ -53,7 +53,7 @@ export function Moderation({ mode }: { mode: "reviews" | "reports" }) {
       }),
   });
   const detail = useQuery({
-    queryKey: [path, selected],
+    queryKey: [path, "detail", selected],
     queryFn: () => api.get<ReviewItem>(`${path}/${selected}`),
     enabled: Boolean(selected),
   });
@@ -66,7 +66,7 @@ export function Moderation({ mode }: { mode: "reviews" | "reports" }) {
   const decide = async (
     decision: "approve" | "reject" | "resolved" | "dismissed",
   ) => {
-    if (!detail.data) return;
+    if (!selected || !detail.data) return;
     setBusy(true);
     setError(undefined);
     try {
@@ -194,7 +194,7 @@ export function Moderation({ mode }: { mode: "reviews" | "reports" }) {
             </button>
           </div>
         </section>
-        {detail.data && (
+        {selected && detail.data && (
           <section className="panel review-detail">
             <p className="eyebrow">固定提交内容 · 不随作者草稿变化</p>
             {mode === "reports" && (

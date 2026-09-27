@@ -1,5 +1,6 @@
+import { useCallback } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { Editorial, Note, NoteDraft, Page } from "@marcus/api-client";
 import { api } from "../src/session";
@@ -36,6 +37,12 @@ export default function Library() {
     getNextPageParam: (page) => page.next_cursor ?? undefined,
   });
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const { refetch } = query;
+  useFocusEffect(
+    useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
   function remove(note: Note) {
     Alert.alert(
       "删除这篇笔记？",
@@ -96,7 +103,9 @@ export default function Library() {
                   ? "审核中"
                   : draft.latest_submission?.review_status === "rejected"
                     ? "未通过审核"
-                    : "草稿"}
+                    : draft.latest_submission?.review_status === "approved"
+                      ? "已通过审核"
+                      : "草稿"}
               </Text>
             </Pressable>
           );

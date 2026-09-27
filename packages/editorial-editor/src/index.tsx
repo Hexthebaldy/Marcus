@@ -341,7 +341,7 @@ export function EditorialEditor({
       onChange(normalizeDocument(active.getJSON())),
   });
   useEffect(() => {
-    editor?.setEditable(!disabled && !busy);
+    editor?.setEditable(!disabled && !busy, false);
   }, [editor, disabled, busy]);
   useEffect(() => {
     if (

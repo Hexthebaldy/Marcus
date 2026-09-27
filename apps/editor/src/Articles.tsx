@@ -315,7 +315,7 @@ export function ArticleEditor() {
   if (!draft)
     return (
       <>
-        <p>正在加载文章…</p>
+        {!query.error && <p>正在加载文章…</p>}
         <ErrorBox error={query.error} />
       </>
     );

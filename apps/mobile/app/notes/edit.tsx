@@ -237,7 +237,10 @@ export default function NoteEdit() {
           { idempotencyKey: publish.current.key },
         );
         setNotice("已提交审核，通过后会出现在 Notes 中。");
-        await qc.invalidateQueries({ queryKey: ["note-publication"] });
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: ["note-publication"] }),
+          qc.invalidateQueries({ queryKey: ["my-library"] }),
+        ]);
       } else setNotice("草稿已保存到服务器。");
     } catch (e) {
       setError(e);
