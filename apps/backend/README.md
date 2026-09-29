@@ -57,3 +57,17 @@ uv run python -m marcus.catalog.seed --admin-email editor@example.com
 ```
 
 完整安装与服务配置见[根目录 README](../../README.md)。
+
+## 编辑器提示找不到 Python 包
+
+使用 VS Code 时，请打开整个 `Marcus` 仓库目录。根目录的 `.vscode/settings.json` 将后端的 `apps/backend/.venv` 设为默认 Python 环境；`pyrightconfig.json` 告诉代码检查工具从 `apps/backend/src` 查找项目源码，并为独立运行的 Pyright 指定后端虚拟环境。这些配置不会安装依赖，也不会关闭找不到包的检查。
+
+如果虚拟环境尚未创建，从仓库根目录执行：
+
+```bash
+(cd apps/backend && uv sync --dev)
+```
+
+如果仍提示 `Import ... could not be resolved`，在 VS Code 命令面板执行 `Python: Select Interpreter`，选择 `apps/backend/.venv` 中的 Python。macOS/Linux 的程序路径是 `apps/backend/.venv/bin/python`，Windows 是 `apps/backend/.venv/Scripts/python.exe`。**已经手动选过的解释器不会因修改默认配置而自动切换**；Pylance 使用编辑器选中的解释器，而不是 `pyrightconfig.json` 中的虚拟环境设置。选好后可执行 `Developer: Reload Window` 重新载入编辑器。
+
+配置行为参考 [VS Code Python 设置说明](https://code.visualstudio.com/docs/python/settings-reference)和 [Pyright 配置说明](https://github.com/microsoft/pyright/blob/main/docs/configuration.md)。
