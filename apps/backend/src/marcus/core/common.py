@@ -30,9 +30,7 @@ def data(row):
 
 
 def version(row, expected, field="version"):
-    """检查记录 row 的版本是否等于调用者提供的 expected，防止覆盖别人的修改。
-
-    field 指定版本属性名，默认是 version。不一致时抛出 409 错误；一致时不修改记录。
+    """检查记录 row 的版本是否等于调用者提供的 expected。
     """
     if getattr(row, field) != expected:
         fail(409, "version_conflict")
@@ -40,9 +38,6 @@ def version(row, expected, field="version"):
 
 async def get(db, model, id, lock=False):
     """通过数据库操作对象 db 查询 model 表，返回首个主键字段等于 id 的记录。
-
-    找不到记录时抛出 404 错误。lock=True 时申请行锁，锁随当前事务结束而释放。
-    这里仅使用第一个主键字段，不适合作为联合主键记录的完整查找方式。
     """
     query = select(model).where(model.__mapper__.primary_key[0] == id)
     if lock:
@@ -159,10 +154,13 @@ async def audit(db, request, user, action, target_type, target_id, reason=None):
 
 
 async def enqueue(db, kind, target_id, payload=None):
-    """查找或创建针对 target_id 的后台任务，返回任务记录。
+    """用户获取验证码、完成图片上传或提交笔记时，把后续工作记入任务表。
 
-    kind 表示任务种类，payload 是任务所需的附加数据。同种类、同目标已有任务时直接返回它。
-    新任务先写入当前事务，但本函数不提交；后台工作进程之后才会执行已提交的任务。
+    邮件发送、图片处理和笔记自动检查由后台工作进程执行，当前请求不必等待这些工作完成。
+    kind 指定做什么，target_id 指定处理哪条验证码、媒体或笔记提交记录；
+    payload 存放附加信息，例如清理任务要删除哪类内容。
+    通过数据库操作对象 db 查找任务；同种类、同目标已有任务时返回原任务，否则创建并返回新任务。
+    本函数不发送邮件、不处理图片，也不提交事务；任务提交后才可供后台工作进程领取。
     """
     key = f"{kind}:{target_id}"
     prior = await db.scalar(select(m.Job).where(m.Job.dedupe_key == key))
@@ -176,11 +174,14 @@ async def enqueue(db, kind, target_id, payload=None):
 
 
 async def idempotency(db, user, operation, key, body):
-    """检查一次操作是否已经处理过，避免用户重试时重复创建或发布。
+    """用户创建或发布笔记后没收到响应、客户端重试时，检查是否已经处理过这次请求。
 
-    user、operation 和 key 共同标识这次操作；body 用于计算请求内容的摘要。
-    返回已有记录（没有则为 None）和本次摘要。key 缺失或过长时报 422；
-    同一个标识对应不同内容时报 409。本函数不创建结果记录，调用者随后用 remember 保存。
+    客户端重试必须沿用同一个 key；本函数不会把用户所有创建或发布操作自动合并。
+    user 指当前用户，operation 区分创建笔记、发布某篇笔记等操作，body 是本次请求内容。
+    本函数通过 db 查找相同用户、操作和 key 的记录，并计算用于比较请求内容的摘要。
+    返回已有记录（没有则为 None）和摘要；接口据此复用原笔记或原提交，或继续首次处理。
+    key 缺失或过长时报 422，同一个 key 被用于不同内容时报 409。
+    首次处理的结果由接口随后调用 remember 记录，本函数不创建结果记录。
     """
     if not key or len(key) > 100:
         fail(422, "idempotency_key_required")
@@ -202,10 +203,12 @@ async def idempotency(db, user, operation, key, body):
 
 
 async def remember(db, user, operation, key, fingerprint, id, status):
-    """把已处理操作的结果加入 db，供后续相同请求查找，不在这里提交事务。
+    """接口首次创建笔记或生成发布提交后，记住它的编号，避免客户端重试时再创建一份。
 
-    user、operation、key 标识操作，fingerprint 是请求摘要；id 是结果资源编号，
-    status 是响应状态码。记录的到期时间设为一天后，过期记录由清理任务移除。
+    user、operation、key 标识刚处理的请求，fingerprint 是 idempotency 算出的请求内容摘要。
+    id 是已创建的笔记、发布提交等资源编号，status 是这次响应的状态码。
+    这里只记录资源编号等信息，不保存整份响应；重试时接口会读取原资源，再组装响应。
+    记录通过 db 加入当前事务，本函数不提交。到期时间设为一天后，过期记录由清理任务移除。
     """
     db.add(
         m.IdempotencyRecord(
@@ -221,9 +224,12 @@ async def remember(db, user, operation, key, fingerprint, id, status):
 
 
 def encode_cursor(scope, values):
-    """把分页位置 values 和适用范围 scope 编成字符串，并附上防篡改签名。
+    """用户浏览 Discover 并继续加载时，把这一页的结束位置做成客户端可以带回的字符串。
 
-    返回值供客户端请求下一页时传回。这里是编码和签名，不是加密，内容仍可被读取。
+    例如 Notes 列表把本页最后一篇笔记的首次发布时间和编号放进 values，
+    再用 scope 标明这是哪个用户、城市和内容列表的位置；Editor 列表还会带上编辑排序值。
+    返回的字符串供客户端请求下一页时传回，接口据此从这个位置继续查询。
+    本函数只编码这些信息并添加防篡改签名，不查询笔记，也不加密内容。
     """
     raw = base64.urlsafe_b64encode(
         json.dumps({"scope": scope, "values": values}, default=str, separators=(",", ":")).encode()
@@ -232,10 +238,12 @@ def encode_cursor(scope, values):
 
 
 def decode_cursor(value, scope):
-    """校验客户端传回的分页字符串，成功时返回其中的位置数据。
+    """用户请求 Discover 下一页时，核对带回的分页位置字符串，并取出上次读到的位置。
 
-    value 为空时返回 None，表示没有指定分页位置。格式损坏、签名不符，
-    或字符串中的适用范围与 scope 不同时，抛出 422 错误。
+    value 是客户端传回的字符串，scope 是接口根据当前用户、城市等条件确定的列表范围。
+    成功时返回位置数据，例如 Notes 的发布时间和笔记编号；接口再用这些值查询下一批笔记。
+    value 为空时返回 None，供接口从第一页开始。内容被改动、格式损坏或范围不符时报 422。
+    本函数只校验和读取分页位置，不查询数据库，也不返回文章或笔记本身。
     """
     if not value:
         return None
@@ -252,8 +260,10 @@ def decode_cursor(value, scope):
 
 
 def page(items, next_cursor=None):
-    """把当前页内容 items 和下一页位置 next_cursor 组成统一的返回字典。
+    """让 Discover 等列表接口用相同格式告诉客户端：这一页有哪些内容，还能否继续加载。
 
-    next_cursor 默认为 None，表示没有下一页；本函数不查询数据或计算分页位置。
+    items 是接口已经查好并整理好的内容，next_cursor 是接口准备的下一页位置字符串。
+    返回包含这两个字段的字典；next_cursor 为 None 时表示没有下一页。
+    本函数只组装返回格式，不查询数据库、不挑选内容，也不计算下一页的位置。
     """
     return {"items": items, "next_cursor": next_cursor}
