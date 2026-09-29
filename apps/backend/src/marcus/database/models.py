@@ -1,12 +1,14 @@
 """Explicit SQLAlchemy models for the MySQL 8.4 schema."""
 
+from datetime import datetime
+from decimal import Decimal
+from typing import TypedDict
 from uuid import uuid4
 
 from sqlalchemy import (
     JSON,
     Boolean,
     CheckConstraint,
-    Column,
     ForeignKey,
     ForeignKeyConstraint,
     Index,
@@ -16,9 +18,16 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.mysql import BIGINT, CHAR, DATETIME, DECIMAL, INTEGER, MEDIUMTEXT, SMALLINT
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from marcus.core.security import now
+
+
+class MediaVariant(TypedDict):
+    storage_key: str
+    width: int
+    height: int
+    mime_type: str
 
 
 class Base(DeclarativeBase):
@@ -39,33 +48,35 @@ class User(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    email_lookup_hash = Column(CHAR(64, charset="ascii", collation="ascii_bin"), nullable=True)
-    email_ciphertext = Column(Text(), nullable=True)
-    email_verified_at = Column(DATETIME(fsp=6), nullable=True)
-    display_name = Column(String(40), nullable=False)
-    bio = Column(String(300), nullable=False, default="")
-    avatar_asset_id = Column(
+    email_lookup_hash: Mapped[str | None] = mapped_column(
+        CHAR(64, charset="ascii", collation="ascii_bin"), nullable=True
+    )
+    email_ciphertext: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    display_name: Mapped[str] = mapped_column(String(40), nullable=False)
+    bio: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    avatar_asset_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("media_assets.id", use_alter=True),
         nullable=True,
     )
-    city_id = Column(
+    city_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("cities.id", use_alter=True),
         nullable=True,
     )
-    status = Column(String(20), nullable=False, default="active")
-    terms_version = Column(String(40), nullable=False)
-    terms_accepted_at = Column(DATETIME(fsp=6), nullable=False)
-    deleted_at = Column(DATETIME(fsp=6), nullable=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+    terms_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    terms_accepted_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class UserRole(Base):
@@ -75,20 +86,20 @@ class UserRole(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    user_id = Column(
+    user_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    role = Column(String(20), nullable=False, primary_key=True)
-    granted_by = Column(
+    role: Mapped[str] = mapped_column(String(20), nullable=False, primary_key=True)
+    granted_by: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=True,
     )
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class AuthSendLimit(Base):
@@ -98,13 +109,13 @@ class AuthSendLimit(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    email_lookup_hash = Column(
+    email_lookup_hash: Mapped[str] = mapped_column(
         CHAR(64, charset="ascii", collation="ascii_bin"), nullable=False, primary_key=True
     )
-    purpose = Column(String(30), nullable=False, primary_key=True)
-    next_allowed_at = Column(DATETIME(fsp=6), nullable=False)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    purpose: Mapped[str] = mapped_column(String(30), nullable=False, primary_key=True)
+    next_allowed_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class AuthChallenge(Base):
@@ -114,25 +125,27 @@ class AuthChallenge(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    email_lookup_hash = Column(CHAR(64, charset="ascii", collation="ascii_bin"), nullable=False)
-    email_ciphertext = Column(Text(), nullable=False)
-    purpose = Column(String(30), nullable=False)
-    code_hmac = Column(CHAR(64, charset="ascii", collation="ascii_bin"), nullable=False)
-    delivery_code_ciphertext = Column(Text(), nullable=True)
-    expires_at = Column(DATETIME(fsp=6), nullable=False)
-    attempts = Column(SMALLINT(unsigned=True), nullable=False, default=0)
-    max_attempts = Column(SMALLINT(unsigned=True), nullable=False, default=5)
-    consumed_at = Column(DATETIME(fsp=6), nullable=True)
-    delivery_status = Column(String(20), nullable=False, default="pending")
-    terms_version = Column(String(40), nullable=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    email_lookup_hash: Mapped[str] = mapped_column(
+        CHAR(64, charset="ascii", collation="ascii_bin"), nullable=False
+    )
+    email_ciphertext: Mapped[str] = mapped_column(Text(), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(30), nullable=False)
+    code_hmac: Mapped[str] = mapped_column(CHAR(64, charset="ascii", collation="ascii_bin"), nullable=False)
+    delivery_code_ciphertext: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    attempts: Mapped[int] = mapped_column(SMALLINT(unsigned=True), nullable=False, default=0)
+    max_attempts: Mapped[int] = mapped_column(SMALLINT(unsigned=True), nullable=False, default=5)
+    consumed_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    delivery_status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    terms_version: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class AuthSession(Base):
@@ -142,24 +155,24 @@ class AuthSession(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    user_id = Column(
+    user_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
     )
-    client_type = Column(String(20), nullable=False)
-    device_label = Column(String(100), nullable=False)
-    last_seen_at = Column(DATETIME(fsp=6), nullable=False)
-    absolute_expires_at = Column(DATETIME(fsp=6), nullable=False)
-    revoked_at = Column(DATETIME(fsp=6), nullable=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    client_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    device_label: Mapped[str] = mapped_column(String(100), nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    absolute_expires_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class RefreshToken(Base):
@@ -169,28 +182,28 @@ class RefreshToken(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    session_id = Column(
+    session_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("auth_sessions.id", use_alter=True),
         nullable=False,
     )
-    token_hash = Column(CHAR(64, charset="ascii", collation="ascii_bin"), nullable=False)
-    parent_id = Column(
+    token_hash: Mapped[str] = mapped_column(CHAR(64, charset="ascii", collation="ascii_bin"), nullable=False)
+    parent_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("refresh_tokens.id", use_alter=True),
         nullable=True,
     )
-    expires_at = Column(DATETIME(fsp=6), nullable=False)
-    used_at = Column(DATETIME(fsp=6), nullable=True)
-    revoked_at = Column(DATETIME(fsp=6), nullable=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    expires_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class City(Base):
@@ -200,19 +213,19 @@ class City(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    code = Column(String(32), nullable=False)
-    name = Column(String(80), nullable=False)
-    country_code = Column(CHAR(2, charset="ascii", collation="ascii_bin"), nullable=False)
-    timezone = Column(String(64), nullable=False)
-    enabled = Column(Boolean(create_constraint=True), nullable=False, default=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    code: Mapped[str] = mapped_column(String(32), nullable=False)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    country_code: Mapped[str] = mapped_column(CHAR(2, charset="ascii", collation="ascii_bin"), nullable=False)
+    timezone: Mapped[str] = mapped_column(String(64), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean(create_constraint=True), nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class District(Base):
@@ -222,21 +235,21 @@ class District(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    city_id = Column(
+    city_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("cities.id", use_alter=True),
         nullable=False,
     )
-    code = Column(String(32), nullable=False)
-    name = Column(String(80), nullable=False)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    code: Mapped[str] = mapped_column(String(32), nullable=False)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class Place(Base):
@@ -246,40 +259,40 @@ class Place(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    city_id = Column(
+    city_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("cities.id", use_alter=True),
         nullable=False,
     )
-    district_id = Column(
+    district_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("districts.id", use_alter=True),
         nullable=False,
     )
-    name = Column(String(200), nullable=False)
-    address = Column(String(500), nullable=False, default="")
-    latitude = Column(DECIMAL(9, 6), nullable=True)
-    longitude = Column(DECIMAL(9, 6), nullable=True)
-    summary = Column(String(500), nullable=False, default="")
-    opening_hours_text = Column(String(1000), nullable=False, default="")
-    transport_notes = Column(String(1000), nullable=False, default="")
-    cover_asset_id = Column(
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    address: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    latitude: Mapped[Decimal | None] = mapped_column(DECIMAL(9, 6), nullable=True)
+    longitude: Mapped[Decimal | None] = mapped_column(DECIMAL(9, 6), nullable=True)
+    summary: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    opening_hours_text: Mapped[str] = mapped_column(String(1000), nullable=False, default="")
+    transport_notes: Mapped[str] = mapped_column(String(1000), nullable=False, default="")
+    cover_asset_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("media_assets.id", use_alter=True),
         nullable=True,
     )
-    source_url = Column(String(2048), nullable=True)
-    verified_at = Column(DATETIME(fsp=6), nullable=True)
-    status = Column(String(20), nullable=False, default="draft")
-    version = Column(INTEGER(unsigned=True), nullable=False, default=1)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    source_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft")
+    version: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class PlaceAsset(Base):
@@ -289,20 +302,20 @@ class PlaceAsset(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    place_id = Column(
+    place_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("places.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    asset_id = Column(
+    asset_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("media_assets.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    position = Column(INTEGER(unsigned=True), nullable=False)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
+    position: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
 
 
 class Event(Base):
@@ -312,36 +325,38 @@ class Event(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    city_id = Column(
+    city_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("cities.id", use_alter=True),
         nullable=False,
     )
-    place_id = Column(
+    place_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("places.id", use_alter=True),
         nullable=True,
     )
-    title = Column(String(200), nullable=False, default="")
-    description = Column(Text(), nullable=False, default="")
-    organizer = Column(String(200), nullable=True)
-    booking_url = Column(String(2048), nullable=True)
-    price_status = Column(String(20), nullable=False)
-    price_min_fen = Column(INTEGER(unsigned=True), nullable=True)
-    price_max_fen = Column(INTEGER(unsigned=True), nullable=True)
-    currency = Column(CHAR(3, charset="ascii", collation="ascii_bin"), nullable=False, default="CNY")
-    source_url = Column(String(2048), nullable=True)
-    verified_at = Column(DATETIME(fsp=6), nullable=True)
-    status = Column(String(20), nullable=False, default="draft")
-    version = Column(INTEGER(unsigned=True), nullable=False, default=1)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    title: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    description: Mapped[str] = mapped_column(Text(), nullable=False, default="")
+    organizer: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    booking_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    price_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    price_min_fen: Mapped[int | None] = mapped_column(INTEGER(unsigned=True), nullable=True)
+    price_max_fen: Mapped[int | None] = mapped_column(INTEGER(unsigned=True), nullable=True)
+    currency: Mapped[str] = mapped_column(
+        CHAR(3, charset="ascii", collation="ascii_bin"), nullable=False, default="CNY"
+    )
+    source_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft")
+    version: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class EventSession(Base):
@@ -351,24 +366,24 @@ class EventSession(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    event_id = Column(
+    event_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("events.id", use_alter=True),
         nullable=False,
     )
-    starts_at = Column(DATETIME(fsp=6), nullable=False)
-    ends_at = Column(DATETIME(fsp=6), nullable=False)
-    entry_note = Column(String(500), nullable=False, default="")
-    status = Column(String(20), nullable=False, default="scheduled")
-    version = Column(INTEGER(unsigned=True), nullable=False, default=1)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    starts_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    ends_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    entry_note: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="scheduled")
+    version: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class Tag(Base):
@@ -378,18 +393,18 @@ class Tag(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    slug = Column(String(64), nullable=False)
-    name = Column(String(40), nullable=False)
-    category = Column(String(30), nullable=False)
-    enabled = Column(Boolean(create_constraint=True), nullable=False, default=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    name: Mapped[str] = mapped_column(String(40), nullable=False)
+    category: Mapped[str] = mapped_column(String(30), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean(create_constraint=True), nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class MediaAsset(Base):
@@ -399,33 +414,33 @@ class MediaAsset(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    owner_id = Column(
+    owner_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
     )
-    kind = Column(String(20), nullable=False)
-    purpose = Column(String(30), nullable=False)
-    storage_key = Column(String(255), nullable=False)
-    verified_mime = Column(String(80), nullable=True)
-    size_bytes = Column(BIGINT(unsigned=True), nullable=True)
-    width = Column(INTEGER(unsigned=True), nullable=True)
-    height = Column(INTEGER(unsigned=True), nullable=True)
-    duration_ms = Column(BIGINT(unsigned=True), nullable=True)
-    status = Column(String(20), nullable=False, default="pending")
-    visibility = Column(String(20), nullable=False, default="private")
-    variants = Column(JSON(), nullable=False, default=dict)
-    rejection_code = Column(String(80), nullable=True)
-    upload_expires_at = Column(DATETIME(fsp=6), nullable=False)
-    deleted_at = Column(DATETIME(fsp=6), nullable=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(30), nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    verified_mime: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    size_bytes: Mapped[int | None] = mapped_column(BIGINT(unsigned=True), nullable=True)
+    width: Mapped[int | None] = mapped_column(INTEGER(unsigned=True), nullable=True)
+    height: Mapped[int | None] = mapped_column(INTEGER(unsigned=True), nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(BIGINT(unsigned=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    visibility: Mapped[str] = mapped_column(String(20), nullable=False, default="private")
+    variants: Mapped[dict[str, MediaVariant]] = mapped_column(JSON(), nullable=False, default=dict)
+    rejection_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    upload_expires_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class EditorArticle(Base):
@@ -435,36 +450,38 @@ class EditorArticle(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    author_id = Column(
+    author_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
     )
-    city_id = Column(
+    city_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("cities.id", use_alter=True),
         nullable=False,
     )
-    district_id = Column(
+    district_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("districts.id", use_alter=True),
         nullable=True,
     )
-    status = Column(String(20), nullable=False, default="draft")
-    published_revision_id = Column(CHAR(36, charset="ascii", collation="ascii_bin"), nullable=True)
-    first_published_at = Column(DATETIME(fsp=6), nullable=True)
-    published_at = Column(DATETIME(fsp=6), nullable=True)
-    editorial_rank = Column(INTEGER(), nullable=False, default=0)
-    version = Column(INTEGER(unsigned=True), nullable=False, default=1)
-    deleted_at = Column(DATETIME(fsp=6), nullable=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft")
+    published_revision_id: Mapped[str | None] = mapped_column(
+        CHAR(36, charset="ascii", collation="ascii_bin"), nullable=True
+    )
+    first_published_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    editorial_rank: Mapped[int] = mapped_column(INTEGER(), nullable=False, default=0)
+    version: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False, default=1)
+    deleted_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class EditorDraft(Base):
@@ -474,42 +491,44 @@ class EditorDraft(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    article_id = Column(
+    article_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("editor_articles.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    title = Column(String(150), nullable=False, default="")
-    subtitle = Column(String(200), nullable=False, default="")
-    summary = Column(String(500), nullable=False, default="")
-    focus_type = Column(String(20), nullable=True)
-    primary_place_id = Column(
+    title: Mapped[str] = mapped_column(String(150), nullable=False, default="")
+    subtitle: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    summary: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    focus_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    primary_place_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("places.id", use_alter=True),
         nullable=True,
     )
-    primary_event_id = Column(
+    primary_event_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("events.id", use_alter=True),
         nullable=True,
     )
-    document = Column(JSON(), nullable=False, default=lambda: {"type": "doc", "content": []})
-    document_schema_version = Column(SMALLINT(unsigned=True), nullable=False, default=1)
-    cover_asset_id = Column(
+    document: Mapped[dict[str, object]] = mapped_column(
+        JSON(), nullable=False, default=lambda: {"type": "doc", "content": []}
+    )
+    document_schema_version: Mapped[int] = mapped_column(SMALLINT(unsigned=True), nullable=False, default=1)
+    cover_asset_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("media_assets.id", use_alter=True),
         nullable=True,
     )
-    tag_ids = Column(JSON(), nullable=False, default=list)
-    edit_version = Column(INTEGER(unsigned=True), nullable=False, default=1)
-    last_edited_by = Column(
+    tag_ids: Mapped[list[str]] = mapped_column(JSON(), nullable=False, default=list)
+    edit_version: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False, default=1)
+    last_edited_by: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
     )
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class EditorRevision(Base):
@@ -519,47 +538,49 @@ class EditorRevision(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    article_id = Column(
+    article_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("editor_articles.id", use_alter=True),
         nullable=False,
     )
-    revision_no = Column(INTEGER(unsigned=True), nullable=False)
-    based_on_edit_version = Column(INTEGER(unsigned=True), nullable=False)
-    title = Column(String(150), nullable=False, default="")
-    subtitle = Column(String(200), nullable=False, default="")
-    summary = Column(String(500), nullable=False, default="")
-    focus_type = Column(String(20), nullable=False)
-    primary_place_id = Column(
+    revision_no: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False)
+    based_on_edit_version: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False)
+    title: Mapped[str] = mapped_column(String(150), nullable=False, default="")
+    subtitle: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    summary: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    focus_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    primary_place_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("places.id", use_alter=True),
         nullable=True,
     )
-    primary_event_id = Column(
+    primary_event_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("events.id", use_alter=True),
         nullable=True,
     )
-    document = Column(JSON(), nullable=False, default=lambda: {"type": "doc", "content": []})
-    document_schema_version = Column(SMALLINT(unsigned=True), nullable=False, default=1)
-    plain_text = Column(MEDIUMTEXT(), nullable=False)
-    cover_asset_id = Column(
+    document: Mapped[dict[str, object]] = mapped_column(
+        JSON(), nullable=False, default=lambda: {"type": "doc", "content": []}
+    )
+    document_schema_version: Mapped[int] = mapped_column(SMALLINT(unsigned=True), nullable=False, default=1)
+    plain_text: Mapped[str] = mapped_column(MEDIUMTEXT(), nullable=False)
+    cover_asset_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("media_assets.id", use_alter=True),
         nullable=True,
     )
-    submitted_by = Column(
+    submitted_by: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
     )
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
 
 
 class EditorRevisionTag(Base):
@@ -569,19 +590,19 @@ class EditorRevisionTag(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    revision_id = Column(
+    revision_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("editor_revisions.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    tag_id = Column(
+    tag_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("tags.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
 
 
 class EditorRevisionAsset(Base):
@@ -591,20 +612,20 @@ class EditorRevisionAsset(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    revision_id = Column(
+    revision_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("editor_revisions.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    asset_id = Column(
+    asset_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("media_assets.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    role = Column(String(20), nullable=False, primary_key=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
+    role: Mapped[str] = mapped_column(String(20), nullable=False, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
 
 
 class EditorReview(Base):
@@ -614,30 +635,30 @@ class EditorReview(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    revision_id = Column(
+    revision_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("editor_revisions.id", use_alter=True),
         nullable=False,
     )
-    status = Column(String(20), nullable=False, default="pending")
-    reviewer_id = Column(
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    reviewer_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=True,
     )
-    reason_code = Column(String(80), nullable=True)
-    reviewer_note = Column(Text(), nullable=True)
-    automated_findings = Column(JSON(), nullable=False, default=dict)
-    reviewed_at = Column(DATETIME(fsp=6), nullable=True)
-    version = Column(INTEGER(unsigned=True), nullable=False, default=1)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    reason_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    reviewer_note: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    automated_findings: Mapped[dict[str, object]] = mapped_column(JSON(), nullable=False, default=dict)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    version: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class Note(Base):
@@ -647,42 +668,44 @@ class Note(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    author_id = Column(
+    author_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
     )
-    city_id = Column(
+    city_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("cities.id", use_alter=True),
         nullable=False,
     )
-    title = Column(String(100), nullable=False, default="")
-    body_text = Column(Text(), nullable=False, default="")
-    place_id = Column(
+    title: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    body_text: Mapped[str] = mapped_column(Text(), nullable=False, default="")
+    place_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("places.id", use_alter=True),
         nullable=True,
     )
-    event_id = Column(
+    event_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("events.id", use_alter=True),
         nullable=True,
     )
-    status = Column(String(20), nullable=False, default="draft")
-    published_submission_id = Column(CHAR(36, charset="ascii", collation="ascii_bin"), nullable=True)
-    first_published_at = Column(DATETIME(fsp=6), nullable=True)
-    published_at = Column(DATETIME(fsp=6), nullable=True)
-    version = Column(INTEGER(unsigned=True), nullable=False, default=1)
-    deleted_at = Column(DATETIME(fsp=6), nullable=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="draft")
+    published_submission_id: Mapped[str | None] = mapped_column(
+        CHAR(36, charset="ascii", collation="ascii_bin"), nullable=True
+    )
+    first_published_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    version: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False, default=1)
+    deleted_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class NoteImage(Base):
@@ -692,20 +715,20 @@ class NoteImage(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    note_id = Column(
+    note_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("notes.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    asset_id = Column(
+    asset_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("media_assets.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    position = Column(INTEGER(unsigned=True), nullable=False)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
+    position: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
 
 
 class NoteDraft(Base):
@@ -715,28 +738,28 @@ class NoteDraft(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    note_id = Column(
+    note_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("notes.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    title = Column(String(100), nullable=False, default="")
-    body_text = Column(Text(), nullable=False, default="")
-    image_ids = Column(JSON(), nullable=False, default=list)
-    place_id = Column(
+    title: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    body_text: Mapped[str] = mapped_column(Text(), nullable=False, default="")
+    image_ids: Mapped[list[str]] = mapped_column(JSON(), nullable=False, default=list)
+    place_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("places.id", use_alter=True),
         nullable=True,
     )
-    event_id = Column(
+    event_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("events.id", use_alter=True),
         nullable=True,
     )
-    edit_version = Column(INTEGER(unsigned=True), nullable=False, default=1)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    edit_version: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class NoteSubmission(Base):
@@ -746,45 +769,45 @@ class NoteSubmission(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    note_id = Column(
+    note_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("notes.id", use_alter=True),
         nullable=False,
     )
-    submission_no = Column(INTEGER(unsigned=True), nullable=False)
-    based_on_edit_version = Column(INTEGER(unsigned=True), nullable=False)
-    title = Column(String(100), nullable=False, default="")
-    body_text = Column(Text(), nullable=False, default="")
-    image_ids = Column(JSON(), nullable=False, default=list)
-    place_id = Column(
+    submission_no: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False)
+    based_on_edit_version: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False)
+    title: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    body_text: Mapped[str] = mapped_column(Text(), nullable=False, default="")
+    image_ids: Mapped[list[str]] = mapped_column(JSON(), nullable=False, default=list)
+    place_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("places.id", use_alter=True),
         nullable=True,
     )
-    event_id = Column(
+    event_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("events.id", use_alter=True),
         nullable=True,
     )
-    status = Column(String(20), nullable=False, default="pending")
-    reviewer_id = Column(
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    reviewer_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=True,
     )
-    reason_code = Column(String(80), nullable=True)
-    reviewer_note = Column(Text(), nullable=True)
-    automated_findings = Column(JSON(), nullable=False, default=dict)
-    reviewed_at = Column(DATETIME(fsp=6), nullable=True)
-    review_version = Column(INTEGER(unsigned=True), nullable=False, default=1)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    reason_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    reviewer_note: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    automated_findings: Mapped[dict[str, object]] = mapped_column(JSON(), nullable=False, default=dict)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    review_version: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class NoteReaction(Base):
@@ -794,20 +817,20 @@ class NoteReaction(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    user_id = Column(
+    user_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    note_id = Column(
+    note_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("notes.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    kind = Column(String(20), nullable=False, primary_key=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
 
 
 class EditorArticleReaction(Base):
@@ -817,20 +840,20 @@ class EditorArticleReaction(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    user_id = Column(
+    user_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    article_id = Column(
+    article_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("editor_articles.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    kind = Column(String(20), nullable=False, primary_key=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
 
 
 class EventParticipation(Base):
@@ -840,31 +863,31 @@ class EventParticipation(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    user_id = Column(
+    user_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
     )
-    event_id = Column(
+    event_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("events.id", use_alter=True),
         nullable=False,
     )
-    session_id = Column(
+    session_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("event_sessions.id", use_alter=True),
         nullable=True,
     )
-    state = Column(String(20), nullable=False)
-    attended_at = Column(DATETIME(fsp=6), nullable=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    state: Mapped[str] = mapped_column(String(20), nullable=False)
+    attended_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class UserBlock(Base):
@@ -874,19 +897,19 @@ class UserBlock(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    user_id = Column(
+    user_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    blocked_user_id = Column(
+    blocked_user_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
         primary_key=True,
     )
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
 
 
 class NoteReport(Base):
@@ -896,38 +919,38 @@ class NoteReport(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    reporter_id = Column(
+    reporter_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
     )
-    note_id = Column(
+    note_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("notes.id", use_alter=True),
         nullable=False,
     )
-    submission_id = Column(
+    submission_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("note_submissions.id", use_alter=True),
         nullable=False,
     )
-    reason = Column(String(30), nullable=False)
-    description = Column(String(1000), nullable=False, default="")
-    status = Column(String(20), nullable=False, default="open")
-    resolved_by = Column(
+    reason: Mapped[str] = mapped_column(String(30), nullable=False)
+    description: Mapped[str] = mapped_column(String(1000), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
+    resolved_by: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=True,
     )
-    resolution_note = Column(Text(), nullable=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    resolution_note: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class EditorArticleReport(Base):
@@ -937,38 +960,38 @@ class EditorArticleReport(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    reporter_id = Column(
+    reporter_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
     )
-    article_id = Column(
+    article_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("editor_articles.id", use_alter=True),
         nullable=False,
     )
-    revision_id = Column(
+    revision_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("editor_revisions.id", use_alter=True),
         nullable=False,
     )
-    reason = Column(String(30), nullable=False)
-    description = Column(String(1000), nullable=False, default="")
-    status = Column(String(20), nullable=False, default="open")
-    resolved_by = Column(
+    reason: Mapped[str] = mapped_column(String(30), nullable=False)
+    description: Mapped[str] = mapped_column(String(1000), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
+    resolved_by: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=True,
     )
-    resolution_note = Column(Text(), nullable=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    resolution_note: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class Job(Base):
@@ -978,26 +1001,26 @@ class Job(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    kind = Column(String(30), nullable=False)
-    target_id = Column(CHAR(36, charset="ascii", collation="ascii_bin"), nullable=False)
-    dedupe_key = Column(String(191), nullable=False)
-    payload = Column(JSON(), nullable=False, default=dict)
-    status = Column(String(20), nullable=False, default="queued")
-    attempts = Column(INTEGER(unsigned=True), nullable=False, default=0)
-    max_attempts = Column(INTEGER(unsigned=True), nullable=False, default=3)
-    available_at = Column(DATETIME(fsp=6), nullable=False)
-    lease_owner = Column(String(100), nullable=True)
-    lease_until = Column(DATETIME(fsp=6), nullable=True)
-    last_error_code = Column(String(80), nullable=True)
-    finished_at = Column(DATETIME(fsp=6), nullable=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
-    updated_at = Column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
+    kind: Mapped[str] = mapped_column(String(30), nullable=False)
+    target_id: Mapped[str] = mapped_column(CHAR(36, charset="ascii", collation="ascii_bin"), nullable=False)
+    dedupe_key: Mapped[str] = mapped_column(String(191), nullable=False)
+    payload: Mapped[dict[str, object]] = mapped_column(JSON(), nullable=False, default=dict)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="queued")
+    attempts: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False, default=0)
+    max_attempts: Mapped[int] = mapped_column(INTEGER(unsigned=True), nullable=False, default=3)
+    available_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    lease_owner: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    last_error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DATETIME(fsp=6), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
+    updated_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now, onupdate=now)
 
 
 class IdempotencyRecord(Base):
@@ -1007,24 +1030,26 @@ class IdempotencyRecord(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    user_id = Column(
+    user_id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=False,
     )
-    operation = Column(String(80), nullable=False)
-    request_key = Column(String(100), nullable=False)
-    request_hash = Column(CHAR(64, charset="ascii", collation="ascii_bin"), nullable=False)
-    resource_id = Column(CHAR(36, charset="ascii", collation="ascii_bin"), nullable=False)
-    response_status = Column(SMALLINT(unsigned=True), nullable=False)
-    expires_at = Column(DATETIME(fsp=6), nullable=False)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
+    operation: Mapped[str] = mapped_column(String(80), nullable=False)
+    request_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    request_hash: Mapped[str] = mapped_column(
+        CHAR(64, charset="ascii", collation="ascii_bin"), nullable=False
+    )
+    resource_id: Mapped[str] = mapped_column(CHAR(36, charset="ascii", collation="ascii_bin"), nullable=False)
+    response_status: Mapped[int] = mapped_column(SMALLINT(unsigned=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
 
 
 class AuditLog(Base):
@@ -1034,26 +1059,26 @@ class AuditLog(Base):
         "mysql_charset": "utf8mb4",
         "mysql_collate": "utf8mb4_0900_ai_ci",
     }
-    id = Column(
+    id: Mapped[str] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         nullable=False,
         primary_key=True,
         default=lambda: str(uuid4()),
     )
-    actor_type = Column(String(20), nullable=False)
-    actor_id = Column(
+    actor_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    actor_id: Mapped[str | None] = mapped_column(
         CHAR(36, charset="ascii", collation="ascii_bin"),
         ForeignKey("users.id", use_alter=True),
         nullable=True,
     )
-    action = Column(String(80), nullable=False)
-    target_type = Column(String(50), nullable=False)
-    target_id = Column(CHAR(36, charset="ascii", collation="ascii_bin"), nullable=False)
-    before_summary = Column(JSON(), nullable=True)
-    after_summary = Column(JSON(), nullable=True)
-    request_id = Column(CHAR(36, charset="ascii", collation="ascii_bin"), nullable=False)
-    reason = Column(Text(), nullable=True)
-    created_at = Column(DATETIME(fsp=6), nullable=False, default=now)
+    action: Mapped[str] = mapped_column(String(80), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    target_id: Mapped[str] = mapped_column(CHAR(36, charset="ascii", collation="ascii_bin"), nullable=False)
+    before_summary: Mapped[dict[str, object] | None] = mapped_column(JSON(), nullable=True)
+    after_summary: Mapped[dict[str, object] | None] = mapped_column(JSON(), nullable=True)
+    request_id: Mapped[str] = mapped_column(CHAR(36, charset="ascii", collation="ascii_bin"), nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DATETIME(fsp=6), nullable=False, default=now)
 
 
 # Relational invariants are enforced in MySQL as well as the API.

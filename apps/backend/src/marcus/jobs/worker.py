@@ -11,11 +11,12 @@ import tempfile
 from datetime import timedelta
 from email.message import EmailMessage
 from pathlib import Path
+from typing import cast
 from uuid import uuid4
 
 import aiosmtplib
 from PIL import Image, ImageOps
-from sqlalchemy import delete, select, update
+from sqlalchemy import CursorResult, delete, select, update
 
 from marcus.core.common import data, enqueue
 from marcus.core.config import settings
@@ -38,7 +39,11 @@ async def claim_job(owner, lease_seconds=None):
             columns = ["status", time_column.key]
             if state == "queued":
                 columns.append("id")
-            index = next(index for index in m.Job.__table__.indexes if list(index.columns.keys()) == columns)
+            index = next(
+                index
+                for index in m.Base.metadata.tables["jobs"].indexes
+                if list(index.columns.keys()) == columns
+            )
             query = (
                 select(m.Job)
                 .with_hint(m.Job, f"FORCE INDEX (`{index.name}`)", dialect_name="mysql")
@@ -77,6 +82,7 @@ async def renew_job(id, owner, lease_seconds=None):
             )
             .values(lease_until=now() + timedelta(seconds=lease_seconds or settings.lease_seconds))
         )
+        assert isinstance(result, CursorResult)
         return bool(result.rowcount)
 
 
@@ -333,7 +339,7 @@ async def process_media(job):
 
 
 async def send_email(job):
-    uncertain = False
+    delivery: tuple[str, str] | None = None
     async with SessionFactory.begin() as db:
         if not await lease_guard(db, job):
             return
@@ -351,14 +357,13 @@ async def send_email(job):
         if c.delivery_status in ("sending", "failed"):
             c.delivery_status = "failed"
             c.delivery_code_ciphertext = None
-            uncertain = True
         else:
-            email = decrypt(c.email_ciphertext)
-            code = decrypt(c.delivery_code_ciphertext)
+            delivery = (decrypt(c.email_ciphertext), decrypt(c.delivery_code_ciphertext))
             # Commit intent before SMTP. A reclaimed job never repeats an uncertain send.
             c.delivery_status = "sending"
-    if uncertain:
+    if delivery is None:
         raise RuntimeError("email_delivery_uncertain")
+    email, code = delivery
     message = EmailMessage()
     message["From"] = settings.mail_from
     message["To"] = email
@@ -380,6 +385,7 @@ async def send_email(job):
         async with SessionFactory.begin() as db:
             if await lease_guard(db, job):
                 c = await db.get(m.AuthChallenge, job["target_id"])
+                assert c is not None, "email challenge disappeared while sending"
                 c.delivery_status = "failed"
                 c.delivery_code_ciphertext = None
         raise RuntimeError("email_delivery_uncertain")
@@ -387,6 +393,7 @@ async def send_email(job):
         if not await lease_guard(db, job):
             return
         c = await db.get(m.AuthChallenge, job["target_id"])
+        assert c is not None, "email challenge disappeared while sending"
         c.delivery_status = "sent"
         c.delivery_code_ciphertext = None
 
@@ -412,7 +419,11 @@ async def review(job):
             try:
                 await validate_submission(db, n, sub)
             except HTTPException as exc:
-                sub.automated_findings = {"status": "needs_attention", "code": exc.detail["code"]}
+                assert isinstance(exc.detail, dict)
+                sub.automated_findings = {
+                    "status": "needs_attention",
+                    "code": cast(dict[str, object], exc.detail)["code"],
+                }
                 return
             sub.automated_findings = {
                 "structural_validation": "passed",
@@ -422,7 +433,12 @@ async def review(job):
                 await decide_note(
                     db,
                     sub.id,
-                    DecisionInput(decision="approve", expected_review_version=sub.review_version),
+                    DecisionInput(
+                        decision="approve",
+                        expected_review_version=sub.review_version,
+                        reason_code=None,
+                        note=None,
+                    ),
                     None,
                 )
         else:
@@ -432,12 +448,17 @@ async def review(job):
             if r.status != "pending":
                 return
             rev = await db.get(m.EditorRevision, r.revision_id)
+            assert rev is not None, "review must reference an existing revision"
             a = await db.get(m.EditorArticle, rev.article_id)
             u = await db.get(m.User, rev.submitted_by)
             try:
                 await article_validate(db, a, rev, u, True)
             except HTTPException as exc:
-                r.automated_findings = {"status": "needs_attention", "code": exc.detail["code"]}
+                assert isinstance(exc.detail, dict)
+                r.automated_findings = {
+                    "status": "needs_attention",
+                    "code": cast(dict[str, object], exc.detail)["code"],
+                }
                 return
             r.automated_findings = {"structural_validation": "passed", "requires_human_review": True}
 
@@ -470,6 +491,7 @@ async def cleanup(job):
                 u = await db.get(m.User, id)
                 if not u or u.status != "deleted":
                     return
+                assert u.deleted_at is not None, "deleted user must have a deletion timestamp"
                 if u.deleted_at > cutoff:
                     raise RetainUntil(u.deleted_at + timedelta(days=30))
                 note_ids = list((await db.scalars(select(m.Note.id).where(m.Note.author_id == id))).all())
@@ -485,6 +507,7 @@ async def cleanup(job):
                 n = await db.get(m.Note, nid)
                 if not n or n.status != "deleted":
                     continue
+                assert n.deleted_at is not None, "deleted note must have a deletion timestamp"
                 if n.deleted_at > cutoff:
                     raise RetainUntil(n.deleted_at + timedelta(days=30))
                 await db.execute(delete(m.NoteImage).where(m.NoteImage.note_id == nid))
@@ -500,6 +523,7 @@ async def cleanup(job):
                 a = await db.get(m.EditorArticle, aid)
                 if not a or a.status != "deleted":
                     continue
+                assert a.deleted_at is not None, "deleted article must have a deletion timestamp"
                 if a.deleted_at > cutoff:
                     raise RetainUntil(a.deleted_at + timedelta(days=30))
                 rev_ids = select(m.EditorRevision.id).where(m.EditorRevision.article_id == aid)
@@ -548,6 +572,7 @@ async def execute_job(job):
         async with SessionFactory.begin() as db:
             if await lease_guard(db, job):
                 row = await db.get(m.Job, job["id"])
+                assert row is not None, "guarded job must exist"
                 row.status = "queued"
                 row.available_at = exc.when
                 row.attempts -= 1
@@ -613,7 +638,11 @@ async def sweep_retention():
                 asset = await db.scalar(
                     select(m.MediaAsset).where(m.MediaAsset.id == asset_id).with_for_update()
                 )
-                if asset.status not in ("pending", "ready", "rejected") or await referenced(db, asset_id):
+                if (
+                    not asset
+                    or asset.status not in ("pending", "ready", "rejected")
+                    or await referenced(db, asset_id)
+                ):
                     continue
                 asset.status = "deleted"
                 asset.deleted_at = timestamp

@@ -121,6 +121,7 @@ async def test_editorial_old_review_does_not_change_public_version(api, location
     article_id, draft = await new_editorial(api, editor, location, place_id=object_id(place, "place"))
     first = await submit_editorial(api, editor, article_id, draft)
     await decide_editorial(api, reviewer, first["revision_id"])
+    submitted_versions = []
     for content in ("第二个版本", "第三个版本"):
         draft = await api.request(
             "PATCH",
@@ -129,14 +130,14 @@ async def test_editorial_old_review_does_not_change_public_version(api, location
             body={"expected_version": draft["edit_version"], "document": document(content)},
         )
         submitted = await submit_editorial(api, editor, article_id, draft)
-        if content == "第二个版本":
-            second = submitted
+        submitted_versions.append(submitted)
+    second, third = submitted_versions
     await decide_editorial(api, reviewer, second["revision_id"])
     public = await api.request("GET", f"/editorials/{article_id}", actor=editor)
     assert public["revision_id"] == first["revision_id"]
-    await decide_editorial(api, reviewer, submitted["revision_id"])
+    await decide_editorial(api, reviewer, third["revision_id"])
     public = await api.request("GET", f"/editorials/{article_id}", actor=editor)
-    assert public["revision_id"] == submitted["revision_id"]
+    assert public["revision_id"] == third["revision_id"]
     assert public["document"] == document("第三个版本")
 
 

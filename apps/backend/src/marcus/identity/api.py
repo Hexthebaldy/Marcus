@@ -1,6 +1,8 @@
 import hmac
 import secrets
+from collections.abc import Awaitable
 from datetime import timedelta
+from typing import cast
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -41,10 +43,14 @@ async def rate_limit(request):
     r = Redis.from_url(settings.redis_url)
     try:
         key = "auth-ip:" + digest(request.client.host if request.client else "unknown")
-        count = await r.eval(
-            "local n=redis.call('INCR',KEYS[1]);if n==1 then redis.call('EXPIRE',KEYS[1],600) end;return n",
-            1,
-            key,
+        # Redis shares eval typing with its synchronous client; this async script returns INCR's integer.
+        count = await cast(
+            Awaitable[int],
+            r.eval(
+                "local n=redis.call('INCR',KEYS[1]);if n==1 then redis.call('EXPIRE',KEYS[1],600) end;return n",
+                1,
+                key,
+            ),
         )
     except RedisError:
         fail(503, "rate_limiter_unavailable")

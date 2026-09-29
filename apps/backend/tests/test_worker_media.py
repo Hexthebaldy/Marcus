@@ -65,6 +65,7 @@ async def test_worker_sends_real_smtp_message_then_erases_delivery_secret(api, d
 
     email, challenge_id, code = await api.challenge()
     job = await claim_job("email-worker")
+    assert job is not None
     assert job["kind"] == "send_verification_email"
     await execute_job(job)
     assert len(smtp_receiver) == 1
@@ -93,10 +94,12 @@ async def test_worker_does_not_send_superseded_verification_code(api, db, smtp_r
     await db.execute("UPDATE auth_send_limits SET next_allowed_at=UTC_TIMESTAMP(6)-INTERVAL 1 SECOND")
     _, new_id, new_code = await api.challenge(email)
     old_job = await claim_job("email-worker")
+    assert old_job is not None
     assert old_job["target_id"] == old_id
     await execute_job(old_job)
     assert smtp_receiver == []
     new_job = await claim_job("email-worker")
+    assert new_job is not None
     assert new_job["target_id"] == new_id
     await execute_job(new_job)
     assert len(smtp_receiver) == 1
@@ -155,6 +158,7 @@ async def test_real_image_upload_process_and_signed_download(api, db, s3_service
     image.save(buffer, format="PNG")
     asset_id = await upload_file(api, actor, buffer.getvalue())
     job = await claim_job("image-worker")
+    assert job is not None
     assert job["kind"] == "process_media" and job["target_id"] == asset_id
     await execute_job(job)
     asset = await api.request("GET", f"/media/{asset_id}", actor=actor)
@@ -177,6 +181,7 @@ async def test_upload_claimed_image_with_invalid_bytes_is_rejected(api, db, s3_s
     await db.execute("UPDATE jobs SET status='cancelled' WHERE kind='send_verification_email'")
     asset_id = await upload_file(api, actor, b"this is not a valid PNG image")
     job = await claim_job("image-worker")
+    assert job is not None
     await execute_job(job)
     asset = await api.request("GET", f"/media/{asset_id}", actor=actor)
     assert asset["status"] == "rejected"
@@ -225,6 +230,7 @@ async def test_real_video_upload_transcode_and_poster(api, db, s3_service, tmp_p
     await db.execute("UPDATE jobs SET status='cancelled' WHERE kind='send_verification_email'")
     asset_id = await upload_file(api, actor, source.read_bytes(), kind="video", mime="video/mp4")
     job = await claim_job("video-worker")
+    assert job is not None
     await execute_job(job)
     asset = await api.request("GET", f"/media/{asset_id}", actor=actor)
     assert asset["status"] == "ready", asset

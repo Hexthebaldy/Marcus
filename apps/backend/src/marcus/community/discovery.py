@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, tuple_
+from sqlalchemy import literal, select, tuple_
 
 from marcus.contracts import responses as out
 from marcus.core.common import city_exists, current_user, decode_cursor, encode_cursor, fail, get, page
@@ -32,17 +32,18 @@ async def feed(db, user, city_id, limit, cursor, editorial=False, district_id=No
     last = decode_cursor(cursor, scope)
     if editorial:
         if district_id:
-            q = q.where(model.district_id == district_id)
+            q = q.where(m.EditorArticle.district_id == district_id)
         if last:
             q = q.where(
-                tuple_(model.editorial_rank, model.first_published_at, model.id)
-                < tuple_(int(last[0]), datetime.fromisoformat(last[1]), last[2])
+                tuple_(m.EditorArticle.editorial_rank, model.first_published_at, model.id)
+                < tuple_(literal(int(last[0])), literal(datetime.fromisoformat(last[1])), literal(last[2]))
             )
-        q = q.order_by(model.editorial_rank.desc(), model.first_published_at.desc(), model.id.desc())
+        q = q.order_by(m.EditorArticle.editorial_rank.desc(), model.first_published_at.desc(), model.id.desc())
     else:
         if last:
             q = q.where(
-                tuple_(model.first_published_at, model.id) < tuple_(datetime.fromisoformat(last[0]), last[1])
+                tuple_(model.first_published_at, model.id)
+                < tuple_(literal(datetime.fromisoformat(last[0])), literal(last[1]))
             )
         q = q.order_by(model.first_published_at.desc(), model.id.desc())
     rows = (await db.scalars(q.limit(limit + 1))).all()

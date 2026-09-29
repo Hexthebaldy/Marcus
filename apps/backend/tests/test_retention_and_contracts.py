@@ -54,6 +54,7 @@ async def test_deleted_note_retains_then_cleans_payload_and_releases_media(api, 
     )
     await db.execute("UPDATE jobs SET status='cancelled' WHERE kind!='cleanup'")
     job = await claim_job("cleanup-worker")
+    assert job is not None
     await execute_job(job)
     assert await db.scalar("SELECT body_text FROM notes WHERE id=:id", {"id": note_id})
     assert await db.scalar("SELECT attempts FROM jobs WHERE id=:id", {"id": job["id"]}) == 0
@@ -63,7 +64,9 @@ async def test_deleted_note_retains_then_cleans_payload_and_releases_media(api, 
     await db.execute(
         "UPDATE jobs SET available_at=UTC_TIMESTAMP(6)-INTERVAL 1 SECOND WHERE id=:id", {"id": job["id"]}
     )
-    await execute_job(await claim_job("cleanup-worker"))
+    next_job = await claim_job("cleanup-worker")
+    assert next_job is not None
+    await execute_job(next_job)
     assert await db.scalar("SELECT body_text FROM notes WHERE id=:id", {"id": note_id}) == ""
     assert await db.scalar("SELECT COUNT(*) FROM note_drafts WHERE note_id=:id", {"id": note_id}) == 0
     await db.execute(
@@ -137,6 +140,7 @@ async def test_smtp_unknown_prior_send_is_not_repeated(api, db):
         "UPDATE auth_challenges SET delivery_status='sending' WHERE id=:id", {"id": challenge_id}
     )
     job = await claim_job("replacement-worker")
+    assert job is not None
     await execute_job(job)
     assert await db.scalar("SELECT status FROM jobs WHERE id=:id", {"id": job["id"]}) == "failed"
     assert (

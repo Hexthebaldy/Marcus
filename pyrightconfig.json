@@ -1,4 +1,6 @@
 {
+  "typeCheckingMode": "standard",
+  "pythonVersion": "3.12",
   "include": ["apps/backend"],
   "venvPath": "apps/backend",
   "venv": ".venv",

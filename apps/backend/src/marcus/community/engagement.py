@@ -159,7 +159,8 @@ async def bookmarks(
 
     if last:
         query = query.where(
-            tuple_(q.c.time, q.c.id, q.c.kind) < tuple_(datetime.fromisoformat(last[0]), last[1], last[2])
+            tuple_(q.c.time, q.c.id, q.c.kind)
+            < tuple_(literal(datetime.fromisoformat(last[0])), literal(last[1]), literal(last[2]))
         )
     rows = (
         await db.execute(query.order_by(q.c.time.desc(), q.c.id.desc(), q.c.kind.desc()).limit(limit + 1))

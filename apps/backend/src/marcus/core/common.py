@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 from datetime import timedelta
+from typing import NoReturn
 from uuid import uuid4
 
 from fastapi import Depends, HTTPException, Request
@@ -16,7 +17,7 @@ from marcus.core.security import decode_token, digest, now
 from marcus.database import models as m
 
 
-def fail(status, code, message=None):
+def fail(status: int, code: str, message: str | None = None) -> NoReturn:
     raise HTTPException(status, detail={"code": code, "message": message or code, "details": {}})
 
 

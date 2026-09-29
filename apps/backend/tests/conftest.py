@@ -31,7 +31,8 @@ def test_environment():
 async def db(test_environment):
     from marcus.core.db import engine
 
-    assert make_url(str(engine.url)).database.endswith("_test")
+    database_name = engine.url.database
+    assert database_name is not None and database_name.endswith("_test")
     async with engine.begin() as conn:
         version = await conn.scalar(text("SELECT VERSION()"))
         assert "MariaDB" not in version, f"Expected MySQL, found {version}"

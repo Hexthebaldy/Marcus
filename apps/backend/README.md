@@ -58,6 +58,14 @@ uv run python -m marcus.catalog.seed --admin-email editor@example.com
 
 完整安装与服务配置见[根目录 README](../../README.md)。
 
+## Python 类型检查
+
+在仓库根目录执行 `pnpm typecheck:backend`，可以检查后端源码、数据库迁移和测试中的 Python 类型问题。检查工具 Pyright 已列入后端开发依赖，先执行 `(cd apps/backend && uv sync --dev)` 即可安装锁定版本。也可以在后端目录直接执行 `uv run pyright --project ../../pyrightconfig.json`。
+
+根目录 `pyrightconfig.json` 固定使用 `standard` 检查模式，并按项目支持的最低 Python 版本 3.12 检查语法。此检查不会启动服务或访问数据库；数据库行为仍由 `pnpm test:backend` 验证。
+
+现有 `scripts/test-backend.sh` 也会在确认专用测试库名称后、执行迁移和测试前运行类型检查；任何类型错误都会让脚本停止。
+
 ## 编辑器提示找不到 Python 包
 
 使用 VS Code 时，请打开整个 `Marcus` 仓库目录。根目录的 `.vscode/settings.json` 将后端的 `apps/backend/.venv` 设为默认 Python 环境；`pyrightconfig.json` 告诉代码检查工具从 `apps/backend/src` 查找项目源码，并为独立运行的 Pyright 指定后端虚拟环境。这些配置不会安装依赖，也不会关闭找不到包的检查。

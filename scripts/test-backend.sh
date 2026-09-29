@@ -15,5 +15,6 @@ if url.get_backend_name() != 'mysql' or not (url.database or '').endswith('_test
     raise SystemExit('Refusing to test against anything other than a dedicated MySQL *_test database')
 PY
 
+uv run pyright --project ../../pyrightconfig.json
 MARCUS_DATABASE_URL="${MARCUS_TEST_DATABASE_URL}" uv run alembic upgrade head
 uv run pytest "$@"

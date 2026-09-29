@@ -41,11 +41,13 @@ async def test_expired_lease_is_reclaimed_and_old_worker_cannot_write(db):
 
     job_id = await enqueue_test_job()
     first = await claim_job("worker-a")
+    assert first is not None
     assert first["id"] == job_id
     await db.execute(
         "UPDATE jobs SET lease_until=UTC_TIMESTAMP(6)-INTERVAL 1 SECOND WHERE id=:id", {"id": job_id}
     )
     second = await claim_job("worker-b")
+    assert second is not None
     assert second["id"] == job_id and second["attempts"] == 2
     assert not await renew_job(job_id, "worker-a")
     assert not await finish_job(job_id, "worker-a")
@@ -61,6 +63,7 @@ async def test_failed_job_backoff_and_attempt_limit(db):
 
     job_id = await enqueue_test_job(max_attempts=2)
     first = await claim_job("worker-a")
+    assert first is not None
     assert first["id"] == job_id
     assert await finish_job(job_id, "worker-a", "temporary_failure")
     assert await claim_job("worker-b") is None
@@ -68,6 +71,7 @@ async def test_failed_job_backoff_and_attempt_limit(db):
         "UPDATE jobs SET available_at=UTC_TIMESTAMP(6)-INTERVAL 1 SECOND WHERE id=:id", {"id": job_id}
     )
     second = await claim_job("worker-b")
+    assert second is not None
     assert second["attempts"] == 2
     assert await finish_job(job_id, "worker-b", "temporary_failure")
     assert await db.scalar("SELECT status FROM jobs WHERE id=:id", {"id": job_id}) == "failed"
@@ -79,7 +83,9 @@ async def test_future_job_is_not_claimed_and_expired_max_attempt_is_terminal(db)
 
     future = await enqueue_test_job(available_delta=3600)
     exhausted = await enqueue_test_job(max_attempts=1)
-    assert (await claim_job("worker-a"))["id"] == exhausted
+    claimed = await claim_job("worker-a")
+    assert claimed is not None
+    assert claimed["id"] == exhausted
     await db.execute(
         "UPDATE jobs SET lease_until=UTC_TIMESTAMP(6)-INTERVAL 1 SECOND WHERE id=:id", {"id": exhausted}
     )

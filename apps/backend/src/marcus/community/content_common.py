@@ -26,7 +26,7 @@ async def visible(db, row, user):
 
 async def reactions(db, id, user, editorial=False):
     model = m.EditorArticleReaction if editorial else m.NoteReaction
-    col = model.article_id if editorial else model.note_id
+    col = m.EditorArticleReaction.article_id if editorial else m.NoteReaction.note_id
     counts = dict(
         (await db.execute(select(model.kind, func.count()).where(col == id).group_by(model.kind))).all()
     )

@@ -11,6 +11,7 @@
     "db:migrate": "cd apps/backend && uv run alembic upgrade head",
     "db:seed": "cd apps/backend && uv run python -m marcus.catalog.seed",
     "test:backend": "cd apps/backend && uv run pytest",
+    "typecheck:backend": "cd apps/backend && uv run pyright --project ../../pyrightconfig.json",
     "infra:up": "docker compose -f infra/compose.yaml up -d",
     "infra:down": "docker compose -f infra/compose.yaml down",
     "storage:init": "cd apps/backend && uv run python ../../scripts/init-storage.py",

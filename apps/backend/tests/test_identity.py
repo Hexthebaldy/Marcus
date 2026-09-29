@@ -1,6 +1,45 @@
 import asyncio
+from datetime import timedelta
+from uuid import uuid4
 
+import jwt
 import pytest
+
+
+async def test_expired_access_token_is_rejected_before_using_claims(api):
+    from marcus.core.config import settings
+    from marcus.core.security import now
+
+    actor = await api.login()
+    token = jwt.encode(
+        {
+            "sub": actor.id,
+            "sid": actor.session_id,
+            "iss": "marcus",
+            "aud": "marcus-api",
+            "iat": now() - timedelta(hours=1),
+            "exp": now() - timedelta(seconds=1),
+        },
+        settings.secret_key,
+        algorithm="HS256",
+    )
+    response = await api.client.get("/v1/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "invalid_access_token"
+
+
+@pytest.mark.parametrize("missing", ["session", "user"])
+async def test_valid_access_token_referencing_missing_record_is_rejected(api, missing):
+    from marcus.core.security import access_token
+
+    actor = await api.login()
+    token = access_token(
+        str(uuid4()) if missing == "user" else actor.id,
+        str(uuid4()) if missing == "session" else actor.session_id,
+    )
+    response = await api.client.get("/v1/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "session_inactive"
 
 
 async def test_challenge_does_not_register_and_can_be_consumed_once(api, db):

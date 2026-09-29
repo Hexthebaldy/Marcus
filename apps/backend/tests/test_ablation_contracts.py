@@ -8,6 +8,7 @@ import httpx
 import pytest
 from fastapi import HTTPException
 from PIL import Image
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
 from .helpers import (
@@ -36,8 +37,9 @@ async def test_auth_rejects_invalid_token_without_disguising_programming_errors(
 
     monkeypatch.setattr(common, "decode_token", broken_decode)
     request = Request({"type": "http", "method": "GET", "headers": [(b"authorization", b"Bearer test")]})
-    with pytest.raises(RuntimeError, match="decoder programming error"):
-        await common.current_user(request, None)
+    async with AsyncSession() as session:
+        with pytest.raises(RuntimeError, match="decoder programming error"):
+            await common.current_user(request, session)
 
 
 async def test_rate_limit_distinguishes_exhaustion_outage_and_programming_error(api, monkeypatch):
