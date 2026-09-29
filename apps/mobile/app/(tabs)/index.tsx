@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -21,8 +21,32 @@ import {
   Button,
 } from "../../src/ui";
 import { EditorialCard, NoteGrid } from "../../src/cards";
+const tabs = ["editorials", "notes"] as const;
+type DiscoverTab = (typeof tabs)[number];
+
 export default function Discover() {
-  const [tab, setTab] = useState<"editorials" | "notes">("editorials");
+  const [tab, setTab] = useState<DiscoverTab>("editorials");
+  const pager = useRef<ScrollView>(null);
+  const [pageWidth, setPageWidth] = useState(0);
+  const selectedTab = useRef<DiscoverTab>("editorials");
+
+  function selectTab(value: DiscoverTab) {
+    selectedTab.current = value;
+    setTab(value);
+    pager.current?.scrollTo({
+      x: tabs.indexOf(value) * pageWidth,
+      animated: true,
+    });
+  }
+
+  useEffect(() => {
+    // Keep the selected page aligned when the available width changes.
+    pager.current?.scrollTo({
+      x: tabs.indexOf(selectedTab.current) * pageWidth,
+      animated: false,
+    });
+  }, [pageWidth]);
+
   const [district, setDistrict] = useState<string>();
   const cities = useQuery({
     queryKey: ["cities"],
@@ -34,61 +58,14 @@ export default function Discover() {
     queryFn: () => api.get<Page<District>>(`/cities/${city!.id}/districts`),
     enabled: !!city,
   });
-  const feed = useInfiniteQuery({
-    queryKey: [
-      "discover",
-      tab,
-      city?.id,
-      tab === "editorials" ? district : undefined,
-    ],
-    enabled: !!city,
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      api.get<Page<Editorial | Note>>(`/discover/${tab}`, {
-        city_id: city!.id,
-        district_id: tab === "editorials" ? district : undefined,
-        cursor: pageParam,
-        limit: 20,
-      }),
-    getNextPageParam: (page) => page.next_cursor ?? undefined,
-    refetchInterval: 240_000,
-  });
-  const items = Array.from(
-    new Map(
-      feed.data?.pages
-        .flatMap((page) => page.items)
-        .map((item) => [item.id, item]),
-    ).values(),
-  );
   return (
     <Screen scroll={false}>
-      <ScrollView
-        contentContainerStyle={{ padding: 22, paddingBottom: 100 }}
-        refreshControl={
-          <RefreshControl
-            tintColor={c.green}
-            refreshing={feed.isRefetching}
-            onRefresh={() => void feed.refetch()}
-          />
-        }
-        onScroll={({
-          nativeEvent: { layoutMeasurement, contentOffset, contentSize },
-        }) => {
-          if (
-            layoutMeasurement.height + contentOffset.y >=
-              contentSize.height - 500 &&
-            feed.hasNextPage &&
-            !feed.isFetching
-          )
-            void feed.fetchNextPage();
-        }}
-        scrollEventThrottle={200}
-      >
+      <View style={{ paddingHorizontal: 22, paddingTop: 12 }}>
         <View
           style={{
             ...s.row,
             justifyContent: "space-between",
-            marginBottom: 30,
+            marginBottom: 12,
           }}
         >
           <Text
@@ -103,15 +80,11 @@ export default function Discover() {
           </Text>
           <Text style={s.muted}>{city?.name ?? "上海"} ↗</Text>
         </View>
-        <Text style={s.eyebrow}>THE CITY IS YOURS</Text>
-        <Text style={{ ...s.title, marginTop: 9, marginBottom: 26 }}>
-          日常之外，城市之中。
-        </Text>
         <View style={{ ...s.row, gap: 27, marginBottom: 18 }}>
-          {(["editorials", "notes"] as const).map((value) => (
+          {tabs.map((value) => (
             <Pressable
               key={value}
-              onPress={() => setTab(value)}
+              onPress={() => selectTab(value)}
               accessibilityRole="tab"
               accessibilityState={{ selected: tab === value }}
               style={{
@@ -167,34 +140,49 @@ export default function Discover() {
             </View>
           </ScrollView>
         )}
-        <ErrorMessage error={cities.error || feed.error || districts.error} />
-        {feed.isLoading || cities.isLoading ? (
-          <Busy />
-        ) : items.length === 0 ? (
-          <Empty
-            title="好内容，值得等待"
-            body={
-              tab === "notes"
-                ? "写下你的第一篇城市笔记，让探索从这里开始。"
-                : "编辑正在寻找这座城市的新鲜去处。稍后回来看看。"
-            }
-          />
-        ) : tab === "notes" ? (
-          <NoteGrid items={items as Note[]} />
-        ) : (
-          (items as Editorial[]).map((item, index) => (
-            <EditorialCard key={item.id} item={item} index={index} />
-          ))
+        <ErrorMessage error={cities.error || districts.error} />
+      </View>
+      <View
+        style={{ flex: 1 }}
+        onLayout={({ nativeEvent }) => setPageWidth(nativeEvent.layout.width)}
+      >
+        {pageWidth > 0 && (
+          <ScrollView
+            ref={pager}
+            horizontal
+            pagingEnabled
+            directionalLockEnabled
+            bounces={false}
+            showsHorizontalScrollIndicator={false}
+            style={{ flex: 1 }}
+            onMomentumScrollEnd={({ nativeEvent }) => {
+              const index = Math.round(nativeEvent.contentOffset.x / pageWidth);
+              const value = tabs[Math.max(0, Math.min(tabs.length - 1, index))];
+              selectedTab.current = value;
+              setTab(value);
+            }}
+          >
+            {tabs.map((value) => (
+              <View
+                key={value}
+                style={{ width: pageWidth, height: "100%" }}
+                accessibilityElementsHidden={tab !== value}
+                importantForAccessibility={
+                  tab === value ? "auto" : "no-hide-descendants"
+                }
+              >
+                <DiscoverFeed
+                  tab={value}
+                  city={city}
+                  district={value === "editorials" ? district : undefined}
+                  active={tab === value}
+                  citiesLoading={cities.isLoading}
+                />
+              </View>
+            ))}
+          </ScrollView>
         )}
-        {feed.hasNextPage && (
-          <Button
-            secondary
-            title="继续发现"
-            loading={feed.isFetchingNextPage}
-            onPress={() => void feed.fetchNextPage()}
-          />
-        )}
-      </ScrollView>
+      </View>
       <Pressable
         accessibilityLabel="发布笔记"
         accessibilityRole="button"
@@ -214,5 +202,108 @@ export default function Discover() {
         <Ionicons name="add" size={28} color={c.paper} />
       </Pressable>
     </Screen>
+  );
+}
+
+function DiscoverFeed({
+  tab,
+  city,
+  district,
+  active,
+  citiesLoading,
+}: {
+  tab: DiscoverTab;
+  city?: City;
+  district?: string;
+  active: boolean;
+  citiesLoading: boolean;
+}) {
+  const feed = useInfiniteQuery({
+    queryKey: [
+      "discover",
+      tab,
+      city?.id,
+      tab === "editorials" ? district : undefined,
+    ],
+    // Load both pages so the adjacent feed is ready while swiping.
+    enabled: !!city,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      api.get<Page<Editorial | Note>>(`/discover/${tab}`, {
+        city_id: city!.id,
+        district_id: tab === "editorials" ? district : undefined,
+        cursor: pageParam,
+        limit: 20,
+      }),
+    getNextPageParam: (page) => page.next_cursor ?? undefined,
+    refetchInterval: active ? 240_000 : false,
+  });
+  const items = Array.from(
+    new Map(
+      feed.data?.pages
+        .flatMap((page) => page.items)
+        .map((item) => [item.id, item]),
+    ).values(),
+  );
+  return (
+    <ScrollView
+      style={{ flex: 1 }}
+      directionalLockEnabled
+      nestedScrollEnabled
+      scrollsToTop={active}
+      contentContainerStyle={{
+        paddingHorizontal: 22,
+        paddingBottom: 100,
+        flexGrow: 1,
+      }}
+      refreshControl={
+        <RefreshControl
+          tintColor={c.green}
+          refreshing={feed.isRefetching}
+          onRefresh={() => void feed.refetch()}
+        />
+      }
+      onScroll={({
+        nativeEvent: { layoutMeasurement, contentOffset, contentSize },
+      }) => {
+        if (
+          active &&
+          layoutMeasurement.height + contentOffset.y >=
+            contentSize.height - 500 &&
+          feed.hasNextPage &&
+          !feed.isFetching
+        )
+          void feed.fetchNextPage();
+      }}
+      scrollEventThrottle={200}
+    >
+      <ErrorMessage error={feed.error} />
+      {feed.isLoading || citiesLoading ? (
+        <Busy />
+      ) : items.length === 0 ? (
+        <Empty
+          title="好内容，值得等待"
+          body={
+            tab === "notes"
+              ? "写下你的第一篇城市笔记，让探索从这里开始。"
+              : "编辑正在寻找这座城市的新鲜去处。稍后回来看看。"
+          }
+        />
+      ) : tab === "notes" ? (
+        <NoteGrid items={items as Note[]} />
+      ) : (
+        (items as Editorial[]).map((item, index) => (
+          <EditorialCard key={item.id} item={item} index={index} />
+        ))
+      )}
+      {feed.hasNextPage && (
+        <Button
+          secondary
+          title="继续发现"
+          loading={feed.isFetchingNextPage}
+          onPress={() => void feed.fetchNextPage()}
+        />
+      )}
+    </ScrollView>
   );
 }
