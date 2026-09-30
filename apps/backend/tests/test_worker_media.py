@@ -112,7 +112,7 @@ async def s3_service(db):
     if os.environ.get("MARCUS_TEST_S3_ENABLED") != "1":
         pytest.skip("Enable MARCUS_TEST_S3_ENABLED=1 with a local S3-compatible HTTP service")
     from marcus.core.config import settings
-    from marcus.media.api import storage
+    from marcus.media.service import storage
 
     assert settings.s3_bucket.endswith("-test"), "External media tests require a dedicated *-test bucket"
     client = storage()

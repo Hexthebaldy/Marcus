@@ -1,41 +1,68 @@
 # 后端代码导航
 
-后端代码仍属于一个 `marcus` Python 包，内部按业务建立子包。HTTP 服务从 `main.py` 启动；寻找某个功能时，先进入对应业务目录。
+用户发来请求后，`api.py` 取出请求参数，调用同模块的 `service.py`，再返回结果。业务规则、数据库查询与修改、后台任务登记都由 `service.py` 执行。
 
 ```text
 src/marcus/
-├── main.py                 # 创建 HTTP 服务，接入各业务接口
-├── identity/api.py         # 邮箱登录、登录续期、用户资料与账户删除
+├── main.py                  # 接入路由，将业务失败转换为 HTTP 错误响应
+├── identity/
+│   ├── api.py               # 登录请求、请求头及 Cookie 的读取和写入
+│   └── service.py           # 验证码、注册登录、续期、资料修改和注销
 ├── catalog/
-│   ├── api.py              # 城市、区、地点、活动、场次和标签
-│   └── seed.py             # 初始化上海资料与可选管理员
-├── notes/api.py            # 用户笔记、草稿、提交和公开内容
+│   ├── api.py               # 城市、区、地点、活动、场次和标签接口
+│   ├── service.py           # 资料查询、规则检查、数据库保存和关联更新
+│   └── seed.py              # 初始化上海资料与可选管理员
+├── notes/
+│   ├── api.py               # 笔记请求参数和响应
+│   └── service.py           # 创建草稿、保存修改、提交审核和公开内容读取
 ├── editorials/
-│   ├── api.py              # Editor 文章、草稿、版本和发布
-│   └── document.py         # 专业文章正文格式检查
-├── media/api.py            # 图片视频上传、访问权限及删除
-├── moderation/api.py       # 内容审核、上下架、角色和账户管理
+│   ├── api.py               # 编辑文章请求参数和响应
+│   ├── service.py           # 专业文章草稿、版本、发布及媒体关联处理
+│   └── document.py          # 专业文章正文格式检查
+├── media/
+│   ├── api.py               # 上传、确认上传和删除接口
+│   └── service.py           # 文件访问、上传资格、媒体状态与处理任务登记
+├── moderation/
+│   ├── api.py               # 审核、上下架和账户管理接口
+│   └── service.py           # 审核决定、恢复内容、角色及账户状态修改
 ├── community/
-│   ├── discovery.py        # Discover 的两个内容列表
-│   ├── engagement.py       # 点赞、收藏、屏蔽、参与记录及举报
-│   └── content_common.py   # 两类内容共用的作者、地点和互动信息
-├── jobs/worker.py          # 执行邮件、媒体处理、审核检查及清理任务
+│   ├── discovery.py         # Discover 列表接口
+│   ├── discovery_service.py # 列表筛选、排序和分页查询
+│   ├── engagement.py        # 点赞、收藏、屏蔽、参与和举报接口
+│   ├── engagement_service.py # 对应业务处理与数据库操作
+│   └── content_common.py    # 两类内容共用的作者、地点和互动信息读取
+├── jobs/worker.py           # 领取任务，调用业务函数，执行邮件和媒体处理
 ├── core/
+│   ├── dependencies.py     # 从 HTTP 请求取得凭证，向路由提供当前用户
+│   ├── auth.py             # 验证凭证、数据库登录记录和用户角色
+│   ├── errors.py           # 保存业务失败原因，不创建 HTTP 响应
+│   ├── common.py           # 数据查询、版本检查、审计、任务登记和分页辅助
 │   ├── config.py           # 读取运行环境配置
-│   ├── db.py               # 数据库连接与请求事务
-│   ├── security.py         # 凭证、加密、摘要等基础函数
-│   └── common.py           # 多个业务共用的权限、分页和请求处理函数
+│   ├── db.py               # 数据库连接及请求结束后的提交或回滚
+│   └── security.py         # 签发凭证、摘要、加密与解密
 ├── database/models.py      # 数据库表模型、约束和索引
 └── contracts/
-    ├── schemas.py          # 客户端可以发送哪些请求字段
-    └── responses.py        # 后端对外返回哪些字段
+    ├── schemas.py          # 输入字段、类型及格式约束
+    └── responses.py        # 接口响应字段
 ```
 
-每个目录中的 `__init__.py` 仅标记和说明 Python 包，不转发旧模块的函数。跨目录引用使用完整包路径，例如从 `marcus.core.db` 读取数据库连接，从 `marcus.media.api` 引用媒体处理函数。
+## 修改功能时去哪里
 
-`api.py` 目前包含该业务的接口和处理逻辑。这次整理不强行给每个业务增加空的服务层或数据访问层。数据库表模型与请求、响应定义分别集中在 `database`、`contracts`，没有在移动文件时改写表结构。
+- 改请求路径、参数来源、Cookie 或响应状态码：改该模块的 `api.py`。社区模块对应 `discovery.py` 和 `engagement.py`。
+- 改“这次操作是否允许”“哪些数据要保存”“要安排什么后台工作”：改该模块的 `service.py`。
+- 业务模块之间直接调用对方的服务函数，例如 `marcus.media.service.validate_assets`。后台 worker 和存储初始化脚本也直接使用服务，不再从路由文件取业务函数。
+- 服务接收输入数据、数据库操作对象及需要的用户信息。服务不接收 FastAPI 的 `Request`、`Response`，不读取 Cookie；审计需要请求编号时，由接口把编号字符串传进去。
+- 服务通过 `ServiceError` 报告失败原因。`main.py` 负责返回原有错误格式与状态码；后台任务可以直接处理同一种错误，不需要构造 HTTP 请求。
 
-数据库迁移仍放在 `migrations/`，测试仍放在 `tests/`。它们与 `src/` 并列。
+## 数据库提交由谁负责
+
+HTTP 请求通过 `core/db.py` 的 `get_session()` 取得数据库操作对象。接口把它传给服务，服务之间继续传递同一个对象。因此创建笔记、登记审核任务等改动可以一起提交或回滚。普通服务操作不自行结束事务；接口正常完成后，`get_session()` 提交，发生异常则回滚，成功响应在提交完成后发送。
+
+登录中有两个明确例外：验证码输入错误次数、旧续期凭证被重复使用后的撤销结果，必须在返回失败响应后仍然保存，因此业务服务保留原先的显式提交。worker 自己开启并管理其数据库事务。
+
+服务也能在测试或后台程序中直接调用；调用者负责传入数据库操作对象和所需数据，并负责结束事务。独立业务调用不经过路由上的角色检查，调用者必须先确认操作权限。
+
+数据库迁移位于 `migrations/`，测试位于 `tests/`；本次拆分不改变表结构或对外接口定义。
 
 ## 启动命令
 

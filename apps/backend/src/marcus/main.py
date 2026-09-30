@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from marcus.catalog import api as catalog
 from marcus.community import discovery, engagement
 from marcus.core.config import settings
+from marcus.core.errors import ServiceError
 from marcus.editorials import api as editorials
 from marcus.identity import api as identity
 from marcus.media import api as media
@@ -49,6 +50,10 @@ def create_app():
                 "request_id": getattr(request.state, "request_id", None),
             },
         )
+
+    @app.exception_handler(ServiceError)
+    async def service_error(request, exc):
+        return error(request, exc.status_code, exc.code, exc.message)
 
     @app.exception_handler(HTTPException)
     async def http_error(request, exc):

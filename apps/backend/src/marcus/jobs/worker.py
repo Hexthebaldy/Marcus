@@ -11,7 +11,6 @@ import tempfile
 from datetime import timedelta
 from email.message import EmailMessage
 from pathlib import Path
-from typing import cast
 from uuid import uuid4
 
 import aiosmtplib
@@ -23,7 +22,7 @@ from marcus.core.config import settings
 from marcus.core.db import SessionFactory
 from marcus.core.security import decrypt, now
 from marcus.database import models as m
-from marcus.media.api import referenced, storage
+from marcus.media.service import referenced, storage
 
 log = logging.getLogger("marcus.worker")
 
@@ -399,12 +398,11 @@ async def send_email(job):
 
 
 async def review(job):
-    from fastapi import HTTPException
-
     from marcus.contracts.schemas import DecisionInput
-    from marcus.editorials.api import article_validate
-    from marcus.moderation.api import decide_note
-    from marcus.notes.api import validate_submission
+    from marcus.core.errors import ServiceError
+    from marcus.editorials.service import article_validate
+    from marcus.moderation.service import decide_note
+    from marcus.notes.service import validate_submission
 
     async with SessionFactory.begin() as db:
         if not await lease_guard(db, job):
@@ -418,11 +416,10 @@ async def review(job):
             n = await db.get(m.Note, sub.note_id)
             try:
                 await validate_submission(db, n, sub)
-            except HTTPException as exc:
-                assert isinstance(exc.detail, dict)
+            except ServiceError as exc:
                 sub.automated_findings = {
                     "status": "needs_attention",
-                    "code": cast(dict[str, object], exc.detail)["code"],
+                    "code": exc.code,
                 }
                 return
             sub.automated_findings = {
@@ -453,11 +450,10 @@ async def review(job):
             u = await db.get(m.User, rev.submitted_by)
             try:
                 await article_validate(db, a, rev, u, True)
-            except HTTPException as exc:
-                assert isinstance(exc.detail, dict)
+            except ServiceError as exc:
                 r.automated_findings = {
                     "status": "needs_attention",
-                    "code": cast(dict[str, object], exc.detail)["code"],
+                    "code": exc.code,
                 }
                 return
             r.automated_findings = {"structural_validation": "passed", "requires_human_review": True}

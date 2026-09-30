@@ -6,10 +6,8 @@ from uuid import uuid4
 
 import httpx
 import pytest
-from fastapi import HTTPException
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.requests import Request
 
 from .helpers import (
     decide_editorial,
@@ -26,7 +24,7 @@ from .test_worker_media import upload_file
 
 
 async def test_auth_rejects_invalid_token_without_disguising_programming_errors(api, monkeypatch):
-    from marcus.core import common
+    from marcus.core import auth
 
     response = await api.client.get("/v1/me", headers={"Authorization": "Bearer invalid"})
     assert response.status_code == 401
@@ -35,33 +33,32 @@ async def test_auth_rejects_invalid_token_without_disguising_programming_errors(
     def broken_decode(_token):
         raise RuntimeError("decoder programming error")
 
-    monkeypatch.setattr(common, "decode_token", broken_decode)
-    request = Request({"type": "http", "method": "GET", "headers": [(b"authorization", b"Bearer test")]})
+    monkeypatch.setattr(auth, "decode_token", broken_decode)
     async with AsyncSession() as session:
         with pytest.raises(RuntimeError, match="decoder programming error"):
-            await common.current_user(request, session)
+            await auth.authenticate(session, "Bearer test")
 
 
 async def test_rate_limit_distinguishes_exhaustion_outage_and_programming_error(api, monkeypatch):
     from redis.exceptions import ConnectionError as RedisConnectionError
 
-    from marcus.identity import api as identity
+    from marcus.core.errors import ServiceError
+    from marcus.identity import service as identity
 
     monkeypatch.setattr(identity.settings, "rate_limit_enabled", True)
     redis = AsyncMock()
     monkeypatch.setattr(identity.Redis, "from_url", lambda _url: redis)
-    request = Request({"type": "http", "client": ("127.0.0.1", 1000)})
     redis.eval.return_value = 21
-    with pytest.raises(HTTPException) as exhausted:
-        await identity.rate_limit(request)
+    with pytest.raises(ServiceError) as exhausted:
+        await identity.rate_limit("127.0.0.1")
     assert exhausted.value.status_code == 429
     redis.eval.side_effect = RedisConnectionError("offline")
-    with pytest.raises(HTTPException) as offline:
-        await identity.rate_limit(request)
+    with pytest.raises(ServiceError) as offline:
+        await identity.rate_limit("127.0.0.1")
     assert offline.value.status_code == 503
     redis.eval.side_effect = RuntimeError("unexpected decoder bug")
     with pytest.raises(RuntimeError, match="unexpected decoder bug"):
-        await identity.rate_limit(request)
+        await identity.rate_limit("127.0.0.1")
     assert redis.aclose.await_count == 3
 
 
@@ -247,7 +244,7 @@ async def test_upload_completion_does_not_label_storage_failures_as_missing_uplo
     from botocore.exceptions import ClientError
 
     from marcus.main import app
-    from marcus.media import api as media
+    from marcus.media import service as media
 
     owner = await api.login()
     created = await api.request(

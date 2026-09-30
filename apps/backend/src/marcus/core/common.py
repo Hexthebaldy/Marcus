@@ -6,21 +6,17 @@ from datetime import timedelta
 from typing import NoReturn
 from uuid import uuid4
 
-from fastapi import Depends, HTTPException, Request
-from jwt import InvalidTokenError
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from marcus.core.config import settings
-from marcus.core.db import get_session
-from marcus.core.security import decode_token, digest, now
+from marcus.core.errors import ServiceError
+from marcus.core.security import digest, now
 from marcus.database import models as m
 
 
 def fail(status: int, code: str, message: str | None = None) -> NoReturn:
-    """中断当前操作，抛出带统一错误内容的请求异常。
+    """中断业务处理并报告原因；接口层负责把它转换成 HTTP 错误响应。
     """
-    raise HTTPException(status, detail={"code": code, "message": message or code, "details": {}})
+    raise ServiceError(status, code, message)
 
 
 def data(row):
@@ -54,78 +50,6 @@ async def roles(db, user_id):
     return set((await db.scalars(select(m.UserRole.role).where(m.UserRole.user_id == user_id))).all())
 
 
-def check_origin(request):
-    """检查请求的 Origin 来源是否在配置的允许列表中，否则抛出 403 错误。
-
-    来源缺失也不会通过检查；允许列表来自 settings.origins。
-    """
-    if request.headers.get("origin") not in settings.origins:
-        fail(403, "untrusted_origin")
-
-
-async def current_user(request: Request, db: AsyncSession = Depends(get_session, scope="function")):
-    """验证本次请求的登录凭证，返回仍可正常使用的用户记录。
-
-    FastAPI 在需要登录的接口执行前调用本函数，并提供请求 request 和数据库操作对象 db。
-    缺少凭证、凭证无效、登录记录失效或用户不可用时抛出 401 错误。
-    编辑后台的修改请求还必须通过来源检查，否则抛出 403 错误。
-    """
-    token = request.headers.get("authorization", "")
-    if not token.startswith("Bearer "):
-        fail(401, "login_required")
-    try:
-        claims = decode_token(token[7:])
-    except InvalidTokenError:
-        fail(401, "invalid_access_token")
-    # db 是执行查询的对象；session 是数据库中保存的一条用户登录记录，两者用途不同。
-    session = await db.get(m.AuthSession, claims["sid"])
-    user = await db.get(m.User, claims["sub"])
-    if (
-        not session
-        or not user
-        or session.user_id != user.id
-        or session.revoked_at
-        or session.absolute_expires_at <= now()
-        or user.status != "active"
-    ):
-        fail(401, "session_inactive")
-    if session.client_type == "editor_web" and request.method not in ("GET", "HEAD", "OPTIONS"):
-        check_origin(request)
-    # 把已验证的登录记录留在本次请求上，供后续接口代码使用。
-    request.state.auth_session = session
-    return user
-
-
-async def editor(user=Depends(current_user), db=Depends(get_session, scope="function")):
-    """要求当前用户具有编辑或管理员角色，成功时返回用户，否则抛出 403 错误。
-
-    FastAPI 先调用 current_user 验证登录，再把用户和数据库操作对象交给本函数。
-    """
-    if not await roles(db, user.id) & {"editor", "admin"}:
-        fail(403, "editor_required")
-    return user
-
-
-async def moderator(user=Depends(current_user), db=Depends(get_session, scope="function")):
-    """要求当前用户具有审核或管理员角色，成功时返回用户，否则抛出 403 错误。
-
-    FastAPI 先验证登录，再提供 user 和用于查询角色的数据库操作对象 db。
-    """
-    if not await roles(db, user.id) & {"moderator", "admin"}:
-        fail(403, "moderator_required")
-    return user
-
-
-async def admin(user=Depends(current_user), db=Depends(get_session, scope="function")):
-    """要求当前用户具有管理员角色，成功时返回用户，否则抛出 403 错误。
-
-    FastAPI 先验证登录，再提供 user 和用于查询角色的数据库操作对象 db。
-    """
-    if "admin" not in await roles(db, user.id):
-        fail(403, "admin_required")
-    return user
-
-
 async def city_exists(db, id):
     """通过 db 查询并返回已启用的城市；不存在时报 404，未启用时报 422。"""
     c = await get(db, m.City, id)
@@ -134,11 +58,11 @@ async def city_exists(db, id):
     return c
 
 
-async def audit(db, request, user, action, target_type, target_id, reason=None):
+async def audit(db, request_id: str | None, user, action, target_type, target_id, reason=None):
     """把一条操作记录加入 db，记下谁对什么对象做了什么，以及可选的原因。
 
     action 表示操作，target_type 和 target_id 表示目标；user 为空时记为系统操作。
-    request 用于取得请求编号，没有请求或编号时生成新编号。本函数不提交事务。
+    request_id 由接口传入请求编号，后台调用可传 None。本函数不提交事务。
     """
     db.add(
         m.AuditLog(
@@ -147,7 +71,7 @@ async def audit(db, request, user, action, target_type, target_id, reason=None):
             action=action,
             target_type=target_type,
             target_id=target_id,
-            request_id=getattr(request.state, "request_id", str(uuid4())) if request else str(uuid4()),
+            request_id=request_id or str(uuid4()),
             reason=reason,
         )
     )

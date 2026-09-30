@@ -1,7 +1,7 @@
 """Create the configured private S3 bucket and permit the editor's direct uploads."""
 from botocore.exceptions import ClientError
 from marcus.core.config import settings
-from marcus.media.api import storage
+from marcus.media.service import storage
 
 client = storage()
 try:
