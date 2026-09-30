@@ -24,7 +24,7 @@ from .test_worker_media import upload_file
 
 
 async def test_auth_rejects_invalid_token_without_disguising_programming_errors(api, monkeypatch):
-    from marcus.core import auth
+    from marcus.services import authentication_service as auth
 
     response = await api.client.get("/v1/me", headers={"Authorization": "Bearer invalid"})
     assert response.status_code == 401
@@ -43,7 +43,7 @@ async def test_rate_limit_distinguishes_exhaustion_outage_and_programming_error(
     from redis.exceptions import ConnectionError as RedisConnectionError
 
     from marcus.core.errors import ServiceError
-    from marcus.identity import service as identity
+    from marcus.services import auth_service as identity
 
     monkeypatch.setattr(identity.settings, "rate_limit_enabled", True)
     redis = AsyncMock()
@@ -244,7 +244,7 @@ async def test_upload_completion_does_not_label_storage_failures_as_missing_uplo
     from botocore.exceptions import ClientError
 
     from marcus.main import app
-    from marcus.media import service as media
+    from marcus.services import media_service as media
 
     owner = await api.login()
     created = await api.request(

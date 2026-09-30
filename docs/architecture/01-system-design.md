@@ -138,17 +138,14 @@ Marcus/
     backend/
       src/marcus/
         main.py              # HTTP服务入口
-        identity/            # 邮箱登录和用户资料
-        catalog/             # 城市、区、地点、活动、场次、标签及初始化数据
-        notes/               # 用户笔记、草稿与提交
-        editorials/          # 专业文章与正文格式检查
-        media/               # 媒体上传及访问权限
-        moderation/          # 内容审核与管理
-        community/           # Discover、互动与举报
+        controllers/         # 接收请求、调用业务函数和返回响应
+        services/            # 登录、内容、审核和社区业务规则与流程
+        repositories/        # 登录、笔记、文章及地点活动的成组查询和关联写入
+        models/              # 按业务拆分的数据库表类、约束与索引
+        schemas/             # 按业务拆分的请求字段及响应定义
         jobs/                # 执行邮件、媒体和清理等后台任务
+        scripts/             # 初始化上海资料与可选管理员
         core/                # 配置、数据库连接和共用函数
-        database/            # 数据库表模型、约束与索引
-        contracts/           # 请求与响应字段定义
       migrations/
       tests/
   packages/

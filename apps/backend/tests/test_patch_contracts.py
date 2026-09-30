@@ -17,7 +17,7 @@ from pydantic import ValidationError
     ],
 )
 def test_patch_non_nullable_fields_can_be_omitted_but_not_cleared(model_name, field, value, base):
-    from marcus.contracts import schemas
+    from marcus import schemas
 
     model = getattr(schemas, model_name)
     assert field not in model.model_validate(base).model_dump(exclude_unset=True)
@@ -30,7 +30,7 @@ def test_patch_non_nullable_fields_can_be_omitted_but_not_cleared(model_name, fi
     "model_name,field,maximum", [("NoteDraftInput", "image_ids", 9), ("EditorialDraftInput", "tag_ids", 10)]
 )
 def test_patch_lists_preserve_size_limits_and_clear_with_empty_array(model_name, field, maximum):
-    from marcus.contracts import schemas
+    from marcus import schemas
 
     model = getattr(schemas, model_name)
     base = {"expected_version": 1}
@@ -47,7 +47,7 @@ def test_patch_lists_preserve_size_limits_and_clear_with_empty_array(model_name,
 
 
 def test_patch_nullable_field_can_be_explicitly_cleared():
-    from marcus.contracts.schemas import ProfileInput
+    from marcus.schemas import ProfileInput
 
     assert "avatar_asset_id" not in ProfileInput().model_dump(exclude_unset=True)
     assert ProfileInput(avatar_asset_id=None).model_dump(exclude_unset=True) == {"avatar_asset_id": None}

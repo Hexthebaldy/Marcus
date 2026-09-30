@@ -4,7 +4,7 @@ from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from marcus.core.config import settings
-from marcus.database.models import Base
+from marcus.models import Base
 
 
 def run(connection):

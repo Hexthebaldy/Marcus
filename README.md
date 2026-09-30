@@ -20,7 +20,7 @@
 | `infra` | 本地 MySQL、Redis、对象存储和邮件接收服务配置。 |
 | `contracts/openapi.json` | 从后端代码生成的接口说明。 |
 
-后端按职责分模块，第一版不拆微服务。接口进程将邮件、图片和视频处理工作写入 MySQL 的任务表，由另一个 Python 进程领取并完成。Redis 用于请求频率限制，不承担消息队列。图片和视频文件保存在兼容 S3 接口的对象存储，MySQL 保存文件资料和引用。
+后端按 controllers、services、repositories、models、schemas 分目录，第一版不拆微服务。接口进程将邮件、图片和视频处理工作写入 MySQL 的任务表，由另一个 Python 进程领取并完成。Redis 用于请求频率限制，不承担消息队列。图片和视频文件保存在兼容 S3 接口的对象存储，MySQL 保存文件资料和引用。
 
 ## 本地启动
 
@@ -48,7 +48,7 @@ pnpm storage:init
 
 ```bash
 cd apps/backend
-uv run python -m marcus.catalog.seed --admin-email editor@example.com
+uv run python -m marcus.scripts.seed --admin-email editor@example.com
 cd ../..
 ```
 

@@ -6,7 +6,7 @@ from uuid import uuid4
 async def enqueue_test_job(*, available_delta=0, max_attempts=3):
     from marcus.core.db import SessionFactory
     from marcus.core.security import now
-    from marcus.database.models import Job
+    from marcus.models import Job
 
     job_id = str(uuid4())
     async with SessionFactory.begin() as session:

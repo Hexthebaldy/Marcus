@@ -171,7 +171,7 @@ def asset_factory(db):
 
         from marcus.core.db import SessionFactory
         from marcus.core.security import now
-        from marcus.database.models import MediaAsset
+        from marcus.models import MediaAsset
 
         asset_id = str(uuid4())
         if kind == "image":

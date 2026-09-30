@@ -8,9 +8,9 @@ from uuid import uuid4
 
 from sqlalchemy import select
 
+from marcus import models as m
 from marcus.core.errors import ServiceError
 from marcus.core.security import digest, now
-from marcus.database import models as m
 
 
 def fail(status: int, code: str, message: str | None = None) -> NoReturn:
@@ -78,13 +78,7 @@ async def audit(db, request_id: str | None, user, action, target_type, target_id
 
 
 async def enqueue(db, kind, target_id, payload=None):
-    """用户获取验证码、完成图片上传或提交笔记时，把后续工作记入任务表。
-
-    邮件发送、图片处理和笔记自动检查由后台工作进程执行，当前请求不必等待这些工作完成。
-    kind 指定做什么，target_id 指定处理哪条验证码、媒体或笔记提交记录；
-    payload 存放附加信息，例如清理任务要删除哪类内容。
-    通过数据库操作对象 db 查找任务；同种类、同目标已有任务时返回原任务，否则创建并返回新任务。
-    本函数不发送邮件、不处理图片，也不提交事务；任务提交后才可供后台工作进程领取。
+    """生产一条后台任务记录并加入数据库。
     """
     key = f"{kind}:{target_id}"
     prior = await db.scalar(select(m.Job).where(m.Job.dedupe_key == key))
