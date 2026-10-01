@@ -9,7 +9,7 @@ import {
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import type { City, District, Editorial, Note, Page } from "@marcus/api-client";
+import type { City, Editorial, Note, Page } from "@marcus/api-client";
 import { api } from "../../src/session";
 import {
   Screen,
@@ -47,17 +47,11 @@ export default function Discover() {
     });
   }, [pageWidth]);
 
-  const [district, setDistrict] = useState<string>();
   const cities = useQuery({
     queryKey: ["cities"],
     queryFn: () => api.get<Page<City>>("/cities"),
   });
   const city = cities.data?.items[0];
-  const districts = useQuery({
-    queryKey: ["districts", city?.id],
-    queryFn: () => api.get<Page<District>>(`/cities/${city!.id}/districts`),
-    enabled: !!city,
-  });
   return (
     <Screen scroll={false}>
       <View style={{ paddingHorizontal: 22, paddingTop: 12 }}>
@@ -100,47 +94,12 @@ export default function Discover() {
                   color: tab === value ? c.green : c.muted,
                 }}
               >
-                {value === "editorials" ? "活动" : "Notes"}
+                {value === "editorials" ? "探索" : "社区"}
               </Text>
             </Pressable>
           ))}
         </View>
-        {tab === "editorials" && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ marginBottom: 24 }}
-          >
-            <View style={s.row}>
-              {[
-                { id: "", name: "全上海" },
-                ...(districts.data?.items ?? []),
-              ].map((item) => (
-                <Pressable
-                  key={item.id}
-                  onPress={() => setDistrict(item.id || undefined)}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 9,
-                    backgroundColor:
-                      (district ?? "") === item.id ? c.green : c.khaki,
-                    borderRadius: 30,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: (district ?? "") === item.id ? c.paper : c.green,
-                    }}
-                  >
-                    {item.name}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </ScrollView>
-        )}
-        <ErrorMessage error={cities.error || districts.error} />
+        <ErrorMessage error={cities.error} />
       </View>
       <View
         style={{ flex: 1 }}
@@ -174,7 +133,6 @@ export default function Discover() {
                 <DiscoverFeed
                   tab={value}
                   city={city}
-                  district={value === "editorials" ? district : undefined}
                   active={tab === value}
                   citiesLoading={cities.isLoading}
                 />
@@ -208,30 +166,22 @@ export default function Discover() {
 function DiscoverFeed({
   tab,
   city,
-  district,
   active,
   citiesLoading,
 }: {
   tab: DiscoverTab;
   city?: City;
-  district?: string;
   active: boolean;
   citiesLoading: boolean;
 }) {
   const feed = useInfiniteQuery({
-    queryKey: [
-      "discover",
-      tab,
-      city?.id,
-      tab === "editorials" ? district : undefined,
-    ],
+    queryKey: ["discover", tab, city?.id],
     // Load both pages so the adjacent feed is ready while swiping.
     enabled: !!city,
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
       api.get<Page<Editorial | Note>>(`/discover/${tab}`, {
         city_id: city!.id,
-        district_id: tab === "editorials" ? district : undefined,
         cursor: pageParam,
         limit: 20,
       }),
