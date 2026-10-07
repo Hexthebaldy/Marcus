@@ -1,0 +1,155 @@
+{
+  "course": "https://netninja.dev/p/complete-react-native",
+  "video": "https://www.youtube.com/watch?v=J2j1yk-34OY",
+  "repository": "https://github.com/iamshaunjp/Complete-React-Native-Tutorial",
+  "commit": "b014b91d9d24d87853fe0c0e9629ddb5ec9f021c",
+  "transcript_available": false,
+  "missing_branch": "lesson-26",
+  "chapters": [
+    {
+      "number": 1,
+      "title": "先让手机显示你的程序",
+      "source_path": "package.json"
+    },
+    {
+      "number": 2,
+      "title": "把文字、区域和图片放到屏幕上",
+      "source_path": "app/index.jsx"
+    },
+    {
+      "number": 3,
+      "title": "增加第二个页面，再点过去",
+      "source_path": "app/index.jsx"
+    },
+    {
+      "number": 4,
+      "title": "让详情页能返回首页",
+      "source_path": "app/_layout.jsx"
+    },
+    {
+      "number": 5,
+      "title": "手机切深色时，页面跟着换颜色",
+      "source_path": "constants/Colors.js"
+    },
+    {
+      "number": 6,
+      "title": "把反复写的配色收进组件",
+      "source_path": "components/ThemedText.jsx"
+    },
+    {
+      "number": 7,
+      "title": "给两组页面不同的外层布局",
+      "source_path": "app/(auth)/_layout.jsx"
+    },
+    {
+      "number": 8,
+      "title": "点击一块区域时执行代码",
+      "source_path": "components/ThemedButton.jsx"
+    },
+    {
+      "number": 9,
+      "title": "在底部放几个长期入口",
+      "source_path": "app/(dashboard)/_layout.jsx"
+    },
+    {
+      "number": 10,
+      "title": "给底部按钮加图标",
+      "source_path": "app/(dashboard)/_layout.jsx"
+    },
+    {
+      "number": 11,
+      "title": "把内容避开刘海和底部手势条",
+      "source_path": "components/ThemedView.jsx"
+    },
+    {
+      "number": 12,
+      "title": "让手机能请求一个后端",
+      "source_path": "lib/appwrite.js"
+    },
+    {
+      "number": 13,
+      "title": "写出登录和注册表单",
+      "source_path": "app/(auth)/login.jsx"
+    },
+    {
+      "number": 14,
+      "title": "让不同页面读到同一个登录用户",
+      "source_path": "contexts/UserContext.jsx"
+    },
+    {
+      "number": 15,
+      "title": "点登录后，等待服务器的结果",
+      "source_path": "contexts/UserContext.jsx"
+    },
+    {
+      "number": 16,
+      "title": "登录失败时，让页面说清楚",
+      "source_path": "app/(auth)/login.jsx"
+    },
+    {
+      "number": 17,
+      "title": "退出时同时结束服务器登录",
+      "source_path": "contexts/UserContext.jsx"
+    },
+    {
+      "number": 18,
+      "title": "重开 App 时先检查登录",
+      "source_path": "contexts/UserContext.jsx"
+    },
+    {
+      "number": 19,
+      "title": "未登录时不显示个人内容",
+      "source_path": "components/auth/UserOnly.jsx"
+    },
+    {
+      "number": 20,
+      "title": "请求没结束时显示转圈",
+      "source_path": "components/ThemedLoader.jsx"
+    },
+    {
+      "number": 21,
+      "title": "在服务器上准备保存内容的位置",
+      "source_path": "contexts/BooksContext.jsx"
+    },
+    {
+      "number": 22,
+      "title": "让列表和创建页共用内容数据",
+      "source_path": "contexts/BooksContext.jsx"
+    },
+    {
+      "number": 23,
+      "title": "把新内容发给服务器保存",
+      "source_path": "contexts/BooksContext.jsx"
+    },
+    {
+      "number": 24,
+      "title": "把服务器内容读回来",
+      "source_path": "contexts/BooksContext.jsx"
+    },
+    {
+      "number": 25,
+      "title": "让列表按项显示内容",
+      "source_path": "app/(dashboard)/books.jsx"
+    },
+    {
+      "number": 26,
+      "title": "服务器变化时更新正在看的列表",
+      "source_path": "contexts/BooksContext.jsx"
+    },
+    {
+      "number": 27,
+      "title": "点哪篇内容，就把哪个编号传给详情",
+      "source_path": "app/(dashboard)/books.jsx"
+    },
+    {
+      "number": 28,
+      "title": "详情页按编号取得正文",
+      "source_path": "app/(dashboard)/books/[id].jsx"
+    },
+    {
+      "number": 29,
+      "title": "删除成功后再离开详情",
+      "source_path": "app/(dashboard)/books/[id].jsx"
+    }
+  ]
+}

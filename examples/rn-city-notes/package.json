@@ -1,0 +1,28 @@
+{
+  "name": "@marcus/rn-city-notes",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
+    "typecheck": "tsc --noEmit",
+    "export": "expo export --platform ios --platform android"
+  },
+  "dependencies": {
+    "expo": "~57.0.25",
+    "expo-build-properties": "~57.0.22",
+    "expo-constants": "~57.0.19",
+    "expo-linking": "~57.0.11",
+    "expo-router": "~57.0.23",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.0",
+    "typescript": "~5.9.3"
+  }
+}

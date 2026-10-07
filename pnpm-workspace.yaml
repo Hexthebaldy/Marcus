@@ -1,6 +1,7 @@
 packages:
   - apps/mobile
   - apps/editor
+  - examples/rn-city-notes
   - packages/*
 allowBuilds:
   esbuild: true

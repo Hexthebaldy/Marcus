@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "城市笔记 Demo",
+    "slug": "rn-city-notes",
+    "scheme": "rn-city-notes",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": { "bundleIdentifier": "com.marcus.citynotesdemo" },
+    "android": { "package": "com.marcus.citynotesdemo" },
+    "plugins": [
+      "expo-router",
+      ["expo-build-properties", { "ios": { "enableSceneSupport": true } }]
+    ]
+  }
+}
